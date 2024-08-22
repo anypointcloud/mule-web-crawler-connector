@@ -53,8 +53,11 @@ Example of an operation that uses the configuration and a connection instance to
 |======================
 | Name | Type | Description | Default Value | Required
 | Configuration | String | The name of the configuration to use. | | *x*{nbsp}
-| Url a| String |  |  | *x*{nbsp}
-| Output Folder a| String |  |  | *x*{nbsp}
+| Website URL a| String |  |  | *x*{nbsp}
+| Maximum Depth a| Number |  |  | *x*{nbsp}
+| Download Images a| Boolean |  |  +++false+++ | {nbsp}
+| Save Website Text to File a| Boolean |  |  +++false+++ | {nbsp}
+| Download Location a| String |  |  | {nbsp}
 | Output Mime Type a| String |  +++The mime type of the payload that this operation outputs.+++ |  | {nbsp}
 | Target Variable a| String |  +++The name of a variable on which the operation's output will be placed+++ |  | {nbsp}
 | Target Value a| String |  +++An expression that will be evaluated against the operation's output and the outcome of that expression will be stored in the target variable+++ |  +++#[payload]+++ | {nbsp}
