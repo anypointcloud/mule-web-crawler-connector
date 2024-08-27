@@ -1,15 +1,15 @@
 {
-  "name": "Mulechain Crawler",
+  "name": "MAC WebCrawler",
   "description": "This is the main class of an extension, is the entry point from which configurations, connection providers, operations and sources are going to be declared.",
   "version": "0.0.0-SNAPSHOT",
   "vendor": "Mulesoft",
   "category": "COMMUNITY",
   "xmlDsl": {
-    "prefix": "mulechain-web-crawler",
-    "namespace": "http://www.mulesoft.org/schema/mule/mulechain-web-crawler",
-    "schemaLocation": "http://www.mulesoft.org/schema/mule/mulechain-web-crawler/current/mule-mulechain-web-crawler.xsd",
+    "prefix": "mac-web-crawler",
+    "namespace": "http://www.mulesoft.org/schema/mule/mac-web-crawler",
+    "schemaLocation": "http://www.mulesoft.org/schema/mule/mac-web-crawler/current/mule-mac-web-crawler.xsd",
     "schemaVersion": "0.0.0-SNAPSHOT",
-    "xsdFileName": "mule-mulechain-web-crawler.xsd"
+    "xsdFileName": "mule-mac-web-crawler.xsd"
   },
   "resources": [],
   "subTypes": [],
@@ -21,7 +21,7 @@
     {
       "stereotype": {
         "type": "CONFIG",
-        "namespace": "MULECHAIN-WEB-CRAWLER",
+        "namespace": "MAC-WEB-CRAWLER",
         "parent": {
           "type": "MODULE_CONFIG",
           "namespace": "MULE"
@@ -33,10 +33,31 @@
             {
               "type": {
                 "format": "java",
-                "type": "String"
+                "type": "Array",
+                "annotations": {
+                  "classInformation": {
+                    "classname": "java.util.List",
+                    "hasDefaultConstructor": false,
+                    "isInterface": true,
+                    "isInstantiable": false,
+                    "isAbstract": true,
+                    "isFinal": false,
+                    "implementedInterfaces": [
+                      "java.util.Collection"
+                    ],
+                    "parent": "",
+                    "genericTypes": [
+                      "java.lang.String"
+                    ],
+                    "isMap": false
+                  }
+                },
+                "item": {
+                  "type": "String"
+                }
               },
               "hasDynamicType": false,
-              "required": true,
+              "required": false,
               "isConfigOverride": false,
               "expressionSupport": "SUPPORTED",
               "role": "BEHAVIOUR",
@@ -52,7 +73,10 @@
                 "order": 1
               },
               "allowedStereotypeModels": [],
-              "name": "configId",
+              "name": "tags",
+              "displayModel": {
+                "displayName": "Tag List"
+              },
               "description": "",
               "modelProperties": {}
             },
@@ -520,6 +544,187 @@
           "description": "Example of an operation that uses the configuration and a connection instance to perform some action.",
           "modelProperties": {},
           "kind": "operation"
+        },
+        {
+          "blocking": true,
+          "executionType": "CPU_LITE",
+          "output": {
+            "type": {
+              "format": "java",
+              "type": "Array",
+              "annotations": {
+                "classInformation": {
+                  "classname": "java.util.Set",
+                  "hasDefaultConstructor": false,
+                  "isInterface": true,
+                  "isInstantiable": false,
+                  "isAbstract": true,
+                  "isFinal": false,
+                  "implementedInterfaces": [
+                    "java.util.Collection"
+                  ],
+                  "parent": "",
+                  "genericTypes": [
+                    "java.lang.String"
+                  ],
+                  "isMap": false
+                }
+              },
+              "item": {
+                "type": "String"
+              }
+            },
+            "hasDynamicType": false,
+            "description": "",
+            "modelProperties": {}
+          },
+          "outputAttributes": {
+            "type": {
+              "format": "java",
+              "type": "Void"
+            },
+            "hasDynamicType": false,
+            "description": "",
+            "modelProperties": {}
+          },
+          "transactional": false,
+          "requiresConnection": false,
+          "supportsStreaming": false,
+          "notifications": [],
+          "nestedComponents": [],
+          "errors": [],
+          "stereotype": {
+            "type": "PROCESSOR",
+            "namespace": "MULE"
+          },
+          "parameterGroupModels": [
+            {
+              "parameters": [
+                {
+                  "type": {
+                    "format": "java",
+                    "type": "String"
+                  },
+                  "hasDynamicType": false,
+                  "required": true,
+                  "isConfigOverride": false,
+                  "expressionSupport": "SUPPORTED",
+                  "role": "BEHAVIOUR",
+                  "dslConfiguration": {
+                    "allowsInlineDefinition": true,
+                    "allowsReferences": true,
+                    "allowTopLevelDefinition": false
+                  },
+                  "layoutModel": {
+                    "password": false,
+                    "text": false,
+                    "query": false,
+                    "order": 1,
+                    "tabName": "General"
+                  },
+                  "allowedStereotypeModels": [],
+                  "name": "url",
+                  "displayModel": {
+                    "displayName": "Website URL",
+                    "example": "https://mac-project.ai/docs"
+                  },
+                  "description": "",
+                  "modelProperties": {}
+                }
+              ],
+              "exclusiveParametersModels": [],
+              "layoutModel": {
+                "password": false,
+                "text": false,
+                "query": false,
+                "order": 1
+              },
+              "showInDsl": false,
+              "name": "General",
+              "description": "",
+              "modelProperties": {}
+            },
+            {
+              "parameters": [
+                {
+                  "type": {
+                    "format": "java",
+                    "type": "String"
+                  },
+                  "hasDynamicType": false,
+                  "required": false,
+                  "isConfigOverride": false,
+                  "expressionSupport": "NOT_SUPPORTED",
+                  "role": "BEHAVIOUR",
+                  "dslConfiguration": {
+                    "allowsInlineDefinition": true,
+                    "allowsReferences": true,
+                    "allowTopLevelDefinition": false
+                  },
+                  "layoutModel": {
+                    "password": false,
+                    "text": false,
+                    "query": false,
+                    "order": 2,
+                    "tabName": "Advanced"
+                  },
+                  "allowedStereotypeModels": [],
+                  "name": "target",
+                  "displayModel": {
+                    "displayName": "Target Variable"
+                  },
+                  "description": "The name of a variable on which the operation\u0027s output will be placed",
+                  "modelProperties": {}
+                },
+                {
+                  "type": {
+                    "format": "java",
+                    "type": "String"
+                  },
+                  "hasDynamicType": false,
+                  "required": false,
+                  "isConfigOverride": false,
+                  "expressionSupport": "REQUIRED",
+                  "defaultValue": "#[payload]",
+                  "role": "BEHAVIOUR",
+                  "dslConfiguration": {
+                    "allowsInlineDefinition": true,
+                    "allowsReferences": true,
+                    "allowTopLevelDefinition": false
+                  },
+                  "layoutModel": {
+                    "password": false,
+                    "text": false,
+                    "query": false,
+                    "order": 3,
+                    "tabName": "Advanced"
+                  },
+                  "allowedStereotypeModels": [],
+                  "name": "targetValue",
+                  "displayModel": {
+                    "displayName": "Target Value"
+                  },
+                  "description": "An expression that will be evaluated against the operation\u0027s output and the outcome of that expression will be stored in the target variable",
+                  "modelProperties": {}
+                }
+              ],
+              "exclusiveParametersModels": [],
+              "layoutModel": {
+                "password": false,
+                "text": false,
+                "query": false,
+                "order": 2
+              },
+              "showInDsl": false,
+              "name": "Output",
+              "description": "",
+              "modelProperties": {}
+            }
+          ],
+          "name": "Get-website-links",
+          "description": "",
+          "modelProperties": {},
+          "kind": "operation"
         }
       ],
       "connectionProviders": [],
@@ -537,7 +742,7 @@
   "notifications": [],
   "errors": [
     {
-      "error": "MULECHAIN-WEB-CRAWLER:RETRY_EXHAUSTED",
+      "error": "MAC-WEB-CRAWLER:RETRY_EXHAUSTED",
       "parent": "MULE:RETRY_EXHAUSTED",
       "handleable": true
     },
@@ -551,7 +756,7 @@
       "handleable": true
     },
     {
-      "error": "MULECHAIN-WEB-CRAWLER:CONNECTIVITY",
+      "error": "MAC-WEB-CRAWLER:CONNECTIVITY",
       "parent": "MULE:CONNECTIVITY",
       "handleable": true
     },

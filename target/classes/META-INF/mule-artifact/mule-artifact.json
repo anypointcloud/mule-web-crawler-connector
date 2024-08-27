@@ -6,7 +6,7 @@
       "version": "0.0.0-SNAPSHOT"
     }
   },
-  "name": "Mulechain Crawler",
+  "name": "MAC WebCrawler",
   "requiredProduct": "MULE",
   "classLoaderModelLoaderDescriptor": {
     "id": "mule",

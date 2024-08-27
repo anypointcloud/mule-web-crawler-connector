@@ -1,6 +1,6 @@
 package com.mule.mulechain.crawler.internal;
 
-import org.jsoup.Jsoup;
+import com.mule.mulechain.crawler.internal.helpers.crawlingHelper;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
@@ -15,15 +15,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
-import java.util.Base64;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 import static org.mule.runtime.extension.api.annotation.param.MediaType.ANY;
 
@@ -54,10 +48,49 @@ public class MulechainwebcrawlerOperations {
                              @DisplayName("Save Website Text to File") @Placement(order = 4) @Example("Yes") boolean savePageContents,
                              @Optional @DisplayName("Download Location") @Placement(order = 5) @Example("/users/mulesoft/downloads") String downloadPath) throws IOException {
     LOGGER.info("Website crawl action");
-    Set<String> visitedLinks = new HashSet<>();
-    String pageContents = startCrawling(url, 0, maxDepth, visitedLinks, downloadImages, downloadPath);
 
+
+    // initialise variables
+    Set<String> visitedLinks = new HashSet<>();
+    List<String> specificTags = configuration.getTags();
+
+    // start crawl
+    String pageContents = startCrawling(url, 0, maxDepth, visitedLinks, downloadImages, downloadPath, specificTags);
+
+    // save contents if required
     if (savePageContents) {
+      saveContents(pageContents, downloadPath);
+    }
+
+    // return content as payload
+    return pageContents;
+  }
+
+  @MediaType(value = ANY, strict = false)
+  @Alias("Get-website-links")
+  public Set<String> getWebsiteLinks(@Config MulechainwebcrawlerConfiguration configuration,
+                             @DisplayName("Website URL") @Placement(order = 1) @Example("https://mac-project.ai/docs") String url) throws IOException {
+    LOGGER.info("Website get-links action");
+
+    // initialise variables
+    Set<String> pageLinks = new HashSet<>();
+
+    // get page as a document
+    Document document = crawlingHelper.getDocument(url);
+
+    // Select all anchor tags with href attributes
+    Elements links = document.select("a[href]");
+
+    // Iterate over the selected elements and add each link to the HashSet
+    for (Element link : links) {
+      pageLinks.add(link.attr("abs:href")); // get absolute URLs
+    }
+
+    return pageLinks;
+  }
+
+
+  private void saveContents(String pageContents, String downloadPath) throws IOException {
       LOGGER.info("Writing crawled contents to file");
       // Combine directory and filename into a single File object
       File file = new File(downloadPath, "crawl-results.txt");
@@ -66,40 +99,54 @@ public class MulechainwebcrawlerOperations {
       file.getParentFile().mkdirs();
 
       // Use try-with-resources to ensure the BufferedWriter is closed automatically
-      try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+      // append to file instead of overwriting
+      try (BufferedWriter writer = new BufferedWriter(new FileWriter(file, true))) {
         writer.write(pageContents);
         LOGGER.info("File saved successfully to " + file.getAbsolutePath());
       } catch (IOException e) {
         LOGGER.info("An error occurred while writing to the file: " + e.getMessage());
         throw e;
       }
-    }
-    return pageContents;
   }
 
 
-  private String startCrawling(String url, int depth, int maxDepth, Set<String> visitedLinks, boolean downloadImages, String downloadPath) {
+
+
+  private String startCrawling(String url, int depth, int maxDepth, Set<String> visitedLinks, boolean downloadImages, String downloadPath, List<String> tags) {
+
+    // return if maxDepth reached
     if (depth > maxDepth || visitedLinks.contains(url)) {
       return "";
     }
 
+    // crawl current page
     StringBuilder collectedText = new StringBuilder();
 
     try {
       visitedLinks.add(url);
 
       LOGGER.info("Fetching content for : " + url);
-      Document document = Jsoup.connect(url)
-              //.userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
-              //.referrer("http://www.google.com")  // to prevent "HTTP error fetching URL. Status=403" error
-              .get();
+
+      // get page as a html document
+      Document document = crawlingHelper.getDocument(url);
 
 
-      // Extract the text content of the document and add it to the collected text
-      String textContent = document.text();
-      collectedText.append(textContent).append("\n");
+      // check if crawl should only iterate over specified tags and extract contents from these tags only
+      if (tags != null && !tags.isEmpty()) {
+        for (String selector : tags) {
+          Elements elements = document.select(selector);
+          for (Element element : elements) {
+            collectedText.append(element.text()).append("\n");
+          }
+        }
+      }
+      else {
+        // Extract the text content of the page and add it to the collected text
+        String textContent = document.text();
+        collectedText.append(textContent).append("\n");
+      }
 
-
+      // check if need to download images in the current page
       if (downloadImages) {
         LOGGER.info("Downloading images for : " + url);
         // Save all images found on the page
@@ -113,10 +160,12 @@ public class MulechainwebcrawlerOperations {
 
       // If not at max depth, find and crawl the links on the page
       if (depth < maxDepth) {
+        // get all links on the current page
         Elements links = document.select("a[href]");
         for (Element link : links) {
           String nextUrl = link.absUrl("href");
-          collectedText.append(startCrawling(nextUrl, depth + 1, maxDepth, visitedLinks, downloadImages, downloadPath));
+          // start crawl of the next page (nextUrl)
+          collectedText.append(startCrawling(nextUrl, depth + 1, maxDepth, visitedLinks, downloadImages, downloadPath, tags));
         }
       }
 
@@ -177,9 +226,9 @@ public class MulechainwebcrawlerOperations {
         URL url = new URL(imageUrl);
 
         // Extract the 'url' parameter from the query string
-        String decodedUrl = extractAndDecodeUrl(imageUrl);
+        String decodedUrl = crawlingHelper.extractAndDecodeUrl(imageUrl);
         // Extract the filename from the decoded URL
-        String fileName = extractFileNameFromUrl(decodedUrl);
+        String fileName = crawlingHelper.extractFileNameFromUrl(decodedUrl);
 
         //String fileName = decodedUrl.substring(imageUrl.lastIndexOf("/") + 1);
         File file = new File(saveDirectory, fileName);
@@ -204,41 +253,6 @@ public class MulechainwebcrawlerOperations {
       LOGGER.error("Error saving image: " + imageUrl);
       throw e;
     }
-  }
-
-  /*
-              "https://wp.salesforce.com/en-ap/wp-content/uploads/sites/14/2024/02/php-marquee-starter-lg-bg.jpg?w=1024",
-            "https://example.com/image?url=%2F_next%2Fstatic%2Fmedia%2Fcard-1.8b03e519.png&w=3840&q=75"
-   */
-  private String extractAndDecodeUrl(String fullUrl) throws UnsupportedEncodingException, MalformedURLException {
-
-    URL url = new URL(fullUrl);
-    String query = url.getQuery(); // Extract the query string from the URL
-
-    if (query != null) {
-      // Extract and decode the 'url' parameter from the query string
-      String[] params = query.split("&");
-      for (String param : params) {
-        String[] pair = param.split("=");
-        if (pair.length == 2 && "url".equals(pair[0])) {
-          return URLDecoder.decode(pair[1], StandardCharsets.UTF_8.name());
-        }
-      }
-      // If 'url' parameter not found, return the URL without changes
-      return fullUrl;
-    } else {
-      // If there's no query string, return the URL as is
-      return fullUrl;
-    }
-  }
-
-
-  private String extractFileNameFromUrl(String url) {
-    // Extract the filename from the URL path
-    String fileName = url.substring(url.lastIndexOf("/") + 1, url.indexOf('?') > 0 ? url.indexOf('?') : url.length());
-
-    // if no extension for image found, then use .jpg as default
-    return fileName.contains(".") ? fileName : fileName + ".jpg";
   }
 }
 
