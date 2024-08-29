@@ -53,17 +53,19 @@ public class MulechainwebcrawlerOperations {
     // initialise variables
     Set<String> visitedLinks = new HashSet<>();
     List<String> specificTags = configuration.getTags();
+    List<Map<String, String>> results = new ArrayList<>();
 
     // start crawl
-    String pageContents = startCrawling(url, 0, maxDepth, visitedLinks, downloadImages, downloadPath, specificTags);
+    List<Map<String, String>> pageContents = startCrawling(url, 0, maxDepth, visitedLinks, downloadImages, downloadPath, specificTags, results);
 
+    String jsonResult = crawlingHelper.covertToJSON(pageContents);
     // save contents if required
     if (savePageContents) {
-      saveContents(pageContents, downloadPath);
+      saveContents(jsonResult, downloadPath);
     }
 
     // return content as payload
-    return pageContents;
+    return jsonResult;
   }
 
   @MediaType(value = ANY, strict = false)
@@ -112,11 +114,15 @@ public class MulechainwebcrawlerOperations {
 
 
 
-  private String startCrawling(String url, int depth, int maxDepth, Set<String> visitedLinks, boolean downloadImages, String downloadPath, List<String> tags) {
+  //private String startCrawling(String url, int depth, int maxDepth, Set<String> visitedLinks, boolean downloadImages, String downloadPath, List<String> tags) {
+  private List<Map<String, String>> startCrawling(String url, int depth, int maxDepth, Set<String> visitedLinks, boolean downloadImages, String downloadPath, List<String> tags, List<Map<String, String>> results) {
+
+
 
     // return if maxDepth reached
     if (depth > maxDepth || visitedLinks.contains(url)) {
-      return "";
+      //return "";
+      return results;
     }
 
     // crawl current page
@@ -136,14 +142,14 @@ public class MulechainwebcrawlerOperations {
         for (String selector : tags) {
           Elements elements = document.select(selector);
           for (Element element : elements) {
-            collectedText.append(element.text()).append("\n");
+            collectedText.append(element.text());
           }
         }
       }
       else {
         // Extract the text content of the page and add it to the collected text
         String textContent = document.text();
-        collectedText.append(textContent).append("\n");
+        collectedText.append(textContent);
       }
 
       // check if need to download images in the current page
@@ -158,6 +164,13 @@ public class MulechainwebcrawlerOperations {
         }
       }
 
+      // Create JSON object for the current page
+      Map<String, String> pageData = new HashMap<>();
+      pageData.put("path", url);
+      pageData.put("content", collectedText.toString());
+      results.add(pageData);
+
+
       // If not at max depth, find and crawl the links on the page
       if (depth < maxDepth) {
         // get all links on the current page
@@ -165,15 +178,14 @@ public class MulechainwebcrawlerOperations {
         for (Element link : links) {
           String nextUrl = link.absUrl("href");
           // start crawl of the next page (nextUrl)
-          collectedText.append(startCrawling(nextUrl, depth + 1, maxDepth, visitedLinks, downloadImages, downloadPath, tags));
+          collectedText.append(startCrawling(nextUrl, depth + 1, maxDepth, visitedLinks, downloadImages, downloadPath, tags, results));
         }
       }
 
     } catch (Exception e) {
       LOGGER.error(e.toString());
-      return e.toString();
     }
-    return collectedText.toString();
+    return results;
   }
 
   private void saveImage(String imageUrl, String saveDirectory) throws IOException {

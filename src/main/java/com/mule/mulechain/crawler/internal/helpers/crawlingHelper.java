@@ -1,5 +1,7 @@
 package com.mule.mulechain.crawler.internal.helpers;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 
@@ -9,6 +11,8 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Map;
 
 public class crawlingHelper {
 
@@ -79,4 +83,9 @@ public class crawlingHelper {
     }
 
 
+    public static String covertToJSON(List<Map<String, String>> pageContents) throws JsonProcessingException{
+        // Convert the result to JSON
+        ObjectMapper mapper = new ObjectMapper();
+        return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(pageContents);
+    }
 }
