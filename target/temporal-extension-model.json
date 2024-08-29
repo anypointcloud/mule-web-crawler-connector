@@ -349,9 +349,9 @@
                     "tabName": "General"
                   },
                   "allowedStereotypeModels": [],
-                  "name": "downloadImages",
+                  "name": "getMetaTags",
                   "displayModel": {
-                    "displayName": "Download Images",
+                    "displayName": "Retrieve Meta Tags",
                     "example": "Yes"
                   },
                   "description": "",
@@ -384,9 +384,79 @@
                     "tabName": "General"
                   },
                   "allowedStereotypeModels": [],
+                  "name": "downloadImages",
+                  "displayModel": {
+                    "displayName": "Download Images",
+                    "example": "Yes"
+                  },
+                  "description": "",
+                  "modelProperties": {}
+                },
+                {
+                  "type": {
+                    "format": "java",
+                    "type": "Boolean",
+                    "annotations": {
+                      "typeId": "boolean"
+                    }
+                  },
+                  "hasDynamicType": false,
+                  "required": false,
+                  "isConfigOverride": false,
+                  "expressionSupport": "SUPPORTED",
+                  "defaultValue": "false",
+                  "role": "BEHAVIOUR",
+                  "dslConfiguration": {
+                    "allowsInlineDefinition": true,
+                    "allowsReferences": true,
+                    "allowTopLevelDefinition": false
+                  },
+                  "layoutModel": {
+                    "password": false,
+                    "text": false,
+                    "query": false,
+                    "order": 5,
+                    "tabName": "General"
+                  },
+                  "allowedStereotypeModels": [],
                   "name": "savePageContents",
                   "displayModel": {
                     "displayName": "Save Website Text to File",
+                    "example": "Yes"
+                  },
+                  "description": "",
+                  "modelProperties": {}
+                },
+                {
+                  "type": {
+                    "format": "java",
+                    "type": "Boolean",
+                    "annotations": {
+                      "typeId": "boolean"
+                    }
+                  },
+                  "hasDynamicType": false,
+                  "required": false,
+                  "isConfigOverride": false,
+                  "expressionSupport": "SUPPORTED",
+                  "defaultValue": "false",
+                  "role": "BEHAVIOUR",
+                  "dslConfiguration": {
+                    "allowsInlineDefinition": true,
+                    "allowsReferences": true,
+                    "allowTopLevelDefinition": false
+                  },
+                  "layoutModel": {
+                    "password": false,
+                    "text": false,
+                    "query": false,
+                    "order": 6,
+                    "tabName": "General"
+                  },
+                  "allowedStereotypeModels": [],
+                  "name": "saveSeparateFiles",
+                  "displayModel": {
+                    "displayName": "Save As Separate Files",
                     "example": "Yes"
                   },
                   "description": "",
@@ -411,7 +481,7 @@
                     "password": false,
                     "text": false,
                     "query": false,
-                    "order": 5,
+                    "order": 7,
                     "tabName": "General"
                   },
                   "allowedStereotypeModels": [],
@@ -442,7 +512,7 @@
                     "password": false,
                     "text": false,
                     "query": false,
-                    "order": 6,
+                    "order": 8,
                     "tabName": "Advanced"
                   },
                   "allowedStereotypeModels": [],
@@ -484,7 +554,7 @@
                     "password": false,
                     "text": false,
                     "query": false,
-                    "order": 7,
+                    "order": 9,
                     "tabName": "Advanced"
                   },
                   "allowedStereotypeModels": [],
@@ -515,7 +585,7 @@
                     "password": false,
                     "text": false,
                     "query": false,
-                    "order": 8,
+                    "order": 10,
                     "tabName": "Advanced"
                   },
                   "allowedStereotypeModels": [],
@@ -734,7 +804,155 @@
       "modelProperties": {}
     }
   ],
-  "operations": [],
+  "operations": [
+    {
+      "blocking": true,
+      "executionType": "CPU_LITE",
+      "output": {
+        "type": {
+          "format": "java",
+          "type": "Void"
+        },
+        "hasDynamicType": false,
+        "description": "",
+        "modelProperties": {}
+      },
+      "outputAttributes": {
+        "type": {
+          "format": "java",
+          "type": "Void"
+        },
+        "hasDynamicType": false,
+        "description": "",
+        "modelProperties": {}
+      },
+      "transactional": false,
+      "requiresConnection": false,
+      "supportsStreaming": false,
+      "notifications": [],
+      "nestedComponents": [],
+      "errors": [],
+      "stereotype": {
+        "type": "PROCESSOR",
+        "namespace": "MULE"
+      },
+      "parameterGroupModels": [
+        {
+          "parameters": [
+            {
+              "type": {
+                "format": "java",
+                "type": "Array",
+                "annotations": {
+                  "classInformation": {
+                    "classname": "java.util.List",
+                    "hasDefaultConstructor": false,
+                    "isInterface": true,
+                    "isInstantiable": false,
+                    "isAbstract": true,
+                    "isFinal": false,
+                    "implementedInterfaces": [
+                      "java.util.Collection"
+                    ],
+                    "parent": "",
+                    "genericTypes": [
+                      "java.util.Map"
+                    ],
+                    "isMap": false
+                  }
+                },
+                "item": {
+                  "type": "Object",
+                  "annotations": {
+                    "classInformation": {
+                      "classname": "java.util.Map",
+                      "hasDefaultConstructor": false,
+                      "isInterface": true,
+                      "isInstantiable": false,
+                      "isAbstract": true,
+                      "isFinal": false,
+                      "implementedInterfaces": [],
+                      "parent": "",
+                      "genericTypes": [
+                        "java.lang.String",
+                        "java.lang.String"
+                      ],
+                      "isMap": true
+                    }
+                  },
+                  "open": {
+                    "type": "String"
+                  },
+                  "fields": []
+                }
+              },
+              "hasDynamicType": false,
+              "required": true,
+              "isConfigOverride": false,
+              "expressionSupport": "SUPPORTED",
+              "role": "BEHAVIOUR",
+              "dslConfiguration": {
+                "allowsInlineDefinition": true,
+                "allowsReferences": true,
+                "allowTopLevelDefinition": false
+              },
+              "layoutModel": {
+                "password": false,
+                "text": false,
+                "query": false,
+                "order": 1
+              },
+              "allowedStereotypeModels": [],
+              "name": "results",
+              "description": "",
+              "modelProperties": {}
+            },
+            {
+              "type": {
+                "format": "java",
+                "type": "String"
+              },
+              "hasDynamicType": false,
+              "required": true,
+              "isConfigOverride": false,
+              "expressionSupport": "SUPPORTED",
+              "role": "BEHAVIOUR",
+              "dslConfiguration": {
+                "allowsInlineDefinition": true,
+                "allowsReferences": true,
+                "allowTopLevelDefinition": false
+              },
+              "layoutModel": {
+                "password": false,
+                "text": false,
+                "query": false,
+                "order": 2
+              },
+              "allowedStereotypeModels": [],
+              "name": "downloadPath",
+              "description": "",
+              "modelProperties": {}
+            }
+          ],
+          "exclusiveParametersModels": [],
+          "layoutModel": {
+            "password": false,
+            "text": false,
+            "query": false,
+            "order": 1
+          },
+          "showInDsl": false,
+          "name": "General",
+          "description": "",
+          "modelProperties": {}
+        }
+      ],
+      "name": "saveContents",
+      "description": "",
+      "modelProperties": {},
+      "kind": "operation"
+    }
+  ],
   "functions": [],
   "constructs": [],
   "connectionProviders": [],

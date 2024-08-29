@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.jsoup.select.Elements;
+import org.jsoup.nodes.Element;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -13,6 +15,7 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 
 public class crawlingHelper {
 
@@ -87,5 +90,30 @@ public class crawlingHelper {
         // Convert the result to JSON
         ObjectMapper mapper = new ObjectMapper();
         return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(pageContents);
+    }
+
+    public static Map<String, String> getPageMetaTags(Document document) {
+        // Map to store meta tag data
+        Map<String, String> metaTagData = new HashMap<>();
+
+        // Select all meta tags
+        Elements metaTags = document.select("meta");
+
+        // Iterate through each meta tag
+        for (Element metaTag : metaTags) {
+            // Extract the 'name' or 'property' attribute and 'content' attribute
+            String name = metaTag.attr("name");
+            if (name.isEmpty()) {
+                // If 'name' is not present, check for 'property' (e.g., Open Graph meta tags)
+                name = metaTag.attr("property");
+            }
+            String content = metaTag.attr("content");
+
+            // Only add to map if 'name' or 'property' and 'content' are present
+            if (!name.isEmpty() && !content.isEmpty()) {
+                metaTagData.put(name, content);
+            }
+        }
+        return metaTagData;
     }
 }

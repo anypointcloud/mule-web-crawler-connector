@@ -9,11 +9,13 @@
         <option name="extension.version" value="0.0.0-SNAPSHOT" />
         <processor name="org.mule.runtime.ast.internal.extension.loader.ASTExtensionResourcesGeneratorAnnotationProcessor" />
         <module name="mulechain-web-crawler" />
+        <module name="mac-web-crawler" />
       </profile>
     </annotationProcessing>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="mac-web-crawler" options="-parameters" />
       <module name="mulechain-web-crawler" options="-parameters" />
     </option>
   </component>
