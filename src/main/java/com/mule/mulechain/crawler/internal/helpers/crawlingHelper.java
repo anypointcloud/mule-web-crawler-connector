@@ -4,8 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
-import org.jsoup.select.Elements;
 import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -13,9 +13,10 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Map;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 public class crawlingHelper {
 
@@ -33,10 +34,6 @@ public class crawlingHelper {
 
      */
 
-    public enum JSONSerialize {
-        All,
-        First
-    }
 
     public static Document getDocument(String url) throws IOException {
         // use jsoup to fetch the current page elements
@@ -91,12 +88,9 @@ public class crawlingHelper {
     }
 
 
-    public static String covertToJSON(List<Map<String, String>> pageContents, JSONSerialize serialize) throws JsonProcessingException{
+    public static String convertToJSON(Object contentToSerialize) throws JsonProcessingException{
         // Convert the result to JSON
         ObjectMapper mapper = new ObjectMapper();
-
-        // Determine which content to serialize based on the enum value
-        Object contentToSerialize = (serialize == JSONSerialize.First && !pageContents.isEmpty()) ? pageContents.get(0) : pageContents;
         return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(contentToSerialize);
     }
 
@@ -125,6 +119,33 @@ public class crawlingHelper {
             }
         }
         return metaTagData;
+    }
+
+    public static Set<String> getInternalPageLinks(Document document) throws MalformedURLException {
+        // initialise variables
+        Set<String> internalLinks = new HashSet<>();
+
+        String baseUrl = document.baseUri();
+        // Extract the base domain from the base URI
+        URL parsedUrl = new URL(baseUrl);
+        String baseDomain = parsedUrl.getHost();
+
+        // Select all anchor tags with href attributes
+        Elements links = document.select("a[href]");
+
+        // Iterate over the selected elements and add each link to the HashSet
+        for (Element link : links) {
+            //pageLinks.add(link.attr("abs:href")); // get absolute URLs  //link.absUrl("href");
+            String href = link.absUrl("href");
+
+            if (href.contains(baseDomain)) {
+                internalLinks.add(href);
+            }
+
+            //pageLinks.add(link.absUrl("href")); // get absolute URLs  //link.absUrl("href");
+        }
+
+        return internalLinks;
     }
 
     public static String getSanitizedFilename(String title) {
