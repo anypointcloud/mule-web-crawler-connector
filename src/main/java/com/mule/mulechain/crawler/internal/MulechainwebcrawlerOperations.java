@@ -1,6 +1,5 @@
 package com.mule.mulechain.crawler.internal;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mule.mulechain.crawler.internal.helpers.crawlingHelper;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -8,7 +7,6 @@ import org.jsoup.select.Elements;
 import org.mule.runtime.extension.api.annotation.Alias;
 import org.mule.runtime.extension.api.annotation.param.Config;
 import org.mule.runtime.extension.api.annotation.param.MediaType;
-import org.mule.runtime.extension.api.annotation.param.Optional;
 import org.mule.runtime.extension.api.annotation.param.display.DisplayName;
 import org.mule.runtime.extension.api.annotation.param.display.Example;
 import org.mule.runtime.extension.api.annotation.param.display.Placement;
@@ -47,29 +45,20 @@ public class MulechainwebcrawlerOperations {
                              @DisplayName("Maximum Depth") @Placement(order = 2) @Example("2") int maxDepth,
                              @DisplayName("Retrieve Meta Tags") @Placement(order = 3) @Example("Yes") boolean getMetaTags,
                              @DisplayName("Download Images") @Placement(order = 4) @Example("Yes") boolean downloadImages,
-                             @DisplayName("Save Website Text to File") @Placement(order = 5) @Example("Yes") boolean savePageContents,
-                             @DisplayName("Save As Separate Files") @Placement(order = 6) @Example("Yes") boolean saveSeparateFiles,
-                             @Optional @DisplayName("Download Location") @Placement(order = 7) @Example("/users/mulesoft/downloads") String downloadPath) throws IOException {
+                             @DisplayName("Download Location") @Placement(order = 5) @Example("/users/mulesoft/downloads") String downloadPath) throws IOException {
     LOGGER.info("Website crawl action");
 
 
     // initialise variables
     Set<String> visitedLinks = new HashSet<>();
     List<String> specificTags = configuration.getTags();
-    List<Map<String, String>> results = new ArrayList<>();
+    List<Map<String, String>> crawlSummary = new ArrayList<>(); // for the list of pages crawled and corresponding filename
 
-    // start crawl
-    //List<Map<String, String>> pageContents = startCrawling(url, 0, maxDepth, visitedLinks, downloadImages, downloadPath, specificTags, results);
-    startCrawling(url, 0, maxDepth, visitedLinks, downloadImages, downloadPath, specificTags, getMetaTags, results);
+    // start craw
+    startCrawling(url, 0, maxDepth, visitedLinks, downloadImages, downloadPath, specificTags, getMetaTags, crawlSummary);
 
-    String jsonResult = crawlingHelper.covertToJSON(results);
-    // save contents if required
-    if (savePageContents && !saveSeparateFiles) {
-      saveContents(jsonResult, downloadPath);
-    }
-    else if (savePageContents && saveSeparateFiles) {
-      saveContents(results, downloadPath);
-    }
+    String jsonResult = crawlingHelper.covertToJSON(crawlSummary, crawlingHelper.JSONSerialize.All);
+
 
     // return content as payload
     return jsonResult;
@@ -99,6 +88,7 @@ public class MulechainwebcrawlerOperations {
   }
 
 
+  /*
   private void saveContents(String results, String downloadPath) throws IOException {
       LOGGER.info("Writing crawled contents to file");
       // Combine directory and filename into a single File object
@@ -117,49 +107,53 @@ public class MulechainwebcrawlerOperations {
         throw e;
       }
   }
+  */
 
 
-  public static void saveContents(List<Map<String, String>> results, String downloadPath) throws IOException {
+  private String saveContents(List<Map<String, String>> results, String downloadPath, String title) throws IOException {
 
     // Create Jackson ObjectMapper instance
-    ObjectMapper objectMapper = new ObjectMapper();
+    //ObjectMapper objectMapper = new ObjectMapper();
 
-    // Iterate over results and save each entry as a separate JSON file
-    int count = 1; // To create unique filenames
-    for (Map<String, String> result : results) {
-        // Convert map to JSON string
-        String jsonContent = objectMapper.writeValueAsString(result);
+    String pageContents = crawlingHelper.covertToJSON(results, crawlingHelper.JSONSerialize.First);
+
+    String fileName = "";
+
+    // Generate a unique filename using the current timestamp
+    String timestamp = new SimpleDateFormat("yyyyMMddHHmmssSSS").format(new Date());
 
 
-      // Extract and sanitize the title to use as filename
-        String title = result.get("title");
-      // Replace invalid characters with underscores
-        String sanitizedTitle = title.replaceAll("[\\\\/:*?\"<>|]", "_");;
+    // Create a unique filename based on the sanitized title
+    fileName = crawlingHelper.getSanitizedFilename(title) + "_" + timestamp + ".json";
 
-        // Create a unique filename based on the sanitized title
-        String fileName = sanitizedTitle + ".json";
+    // Write JSON content to the file
+    // Ensure the output directory exists
+    File file = new File(downloadPath, fileName);
+    // Ensure the directory exists
+    file.getParentFile().mkdirs();
 
-      // Write JSON content to the file
-      // Ensure the output directory exists
-      File file = new File(downloadPath, fileName);
-      // Ensure the directory exists
-      file.getParentFile().mkdirs();
-
-      objectMapper.writeValue(file, result);
+    try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+      // Write content to the file
+      writer.write(pageContents);
       LOGGER.info("Saved content to file: " + fileName);
+    } catch (IOException e) {
+      LOGGER.error("An error occurred while writing to the file: " + e.getMessage());
+      e.printStackTrace();
     }
+
+    return fileName;
   }
 
 
   //private String startCrawling(String url, int depth, int maxDepth, Set<String> visitedLinks, boolean downloadImages, String downloadPath, List<String> tags) {
-  private List<Map<String, String>> startCrawling(String url, int depth, int maxDepth, Set<String> visitedLinks, boolean downloadImages, String downloadPath, List<String> tags, boolean getMetaTags, List<Map<String, String>> results) {
+  private List<Map<String, String>> startCrawling(String url, int depth, int maxDepth, Set<String> visitedLinks, boolean downloadImages, String downloadPath, List<String> tags, boolean getMetaTags, List<Map<String, String>> crawlSummary) {
 
-
+    List<Map<String, String>> pageResults = new ArrayList<>();
 
     // return if maxDepth reached
     if (depth > maxDepth || visitedLinks.contains(url)) {
       //return "";
-      return results;
+      return crawlSummary;
     }
 
     // crawl current page
@@ -218,8 +212,20 @@ public class MulechainwebcrawlerOperations {
       }
 
 
+      // add page content results
       pageData.put("content", collectedText.toString());
-      results.add(pageData);
+      pageResults.add(pageData);
+
+      String filename = saveContents(pageResults, downloadPath, title);
+
+      // add basic meta-data into returning payload map
+      Map<String, String> summary = new HashMap<>();
+      summary.put("url", url);
+      summary.put("title", title);
+      summary.put("filename", filename);
+
+
+      crawlSummary.add(summary);
 
 
       // If not at max depth, find and crawl the links on the page
@@ -229,14 +235,14 @@ public class MulechainwebcrawlerOperations {
         for (Element link : links) {
           String nextUrl = link.absUrl("href");
           // start crawl of the next page (nextUrl)
-          collectedText.append(startCrawling(nextUrl, depth + 1, maxDepth, visitedLinks, downloadImages, downloadPath, tags, getMetaTags, results));
+          collectedText.append(startCrawling(nextUrl, depth + 1, maxDepth, visitedLinks, downloadImages, downloadPath, tags, getMetaTags, crawlSummary));
         }
       }
 
     } catch (Exception e) {
       LOGGER.error(e.toString());
     }
-    return results;
+    return crawlSummary;
   }
 
   private void saveImage(String imageUrl, String saveDirectory) throws IOException {

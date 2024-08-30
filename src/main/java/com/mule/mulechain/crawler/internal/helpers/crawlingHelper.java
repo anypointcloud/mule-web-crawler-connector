@@ -33,6 +33,11 @@ public class crawlingHelper {
 
      */
 
+    public enum JSONSerialize {
+        All,
+        First
+    }
+
     public static Document getDocument(String url) throws IOException {
         // use jsoup to fetch the current page elements
         Document document = Jsoup.connect(url)
@@ -86,11 +91,16 @@ public class crawlingHelper {
     }
 
 
-    public static String covertToJSON(List<Map<String, String>> pageContents) throws JsonProcessingException{
+    public static String covertToJSON(List<Map<String, String>> pageContents, JSONSerialize serialize) throws JsonProcessingException{
         // Convert the result to JSON
         ObjectMapper mapper = new ObjectMapper();
-        return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(pageContents);
+
+        // Determine which content to serialize based on the enum value
+        Object contentToSerialize = (serialize == JSONSerialize.First && !pageContents.isEmpty()) ? pageContents.get(0) : pageContents;
+        return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(contentToSerialize);
     }
+
+
 
     public static Map<String, String> getPageMetaTags(Document document) {
         // Map to store meta tag data
@@ -115,5 +125,10 @@ public class crawlingHelper {
             }
         }
         return metaTagData;
+    }
+
+    public static String getSanitizedFilename(String title) {
+        // Replace invalid characters with underscores
+        return title.replaceAll("[\\\\/:*?\"<>|]", "_").replaceAll(" ", "");
     }
 }

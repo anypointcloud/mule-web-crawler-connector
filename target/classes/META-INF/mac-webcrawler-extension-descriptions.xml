@@ -34,12 +34,6 @@
                 <parameter name="downloadImages">
                     <description><![CDATA[]]></description>
                 </parameter>
-                <parameter name="savePageContents">
-                    <description><![CDATA[]]></description>
-                </parameter>
-                <parameter name="saveSeparateFiles">
-                    <description><![CDATA[]]></description>
-                </parameter>
                 <parameter name="downloadPath">
                     <description><![CDATA[]]></description>
                 </parameter>
@@ -65,17 +59,6 @@
                 </parameter>
                 <parameter name="targetValue">
                     <description><![CDATA[An expression that will be evaluated against the operation's output and the outcome of that expression will be stored in the target variable]]></description>
-                </parameter>
-            </parameters>
-        </operation>
-        <operation name="saveContents">
-            <description><![CDATA[]]></description>
-            <parameters>
-                <parameter name="results">
-                    <description><![CDATA[]]></description>
-                </parameter>
-                <parameter name="downloadPath">
-                    <description><![CDATA[]]></description>
                 </parameter>
             </parameters>
         </operation>
