@@ -1,9 +1,8 @@
 package com.mule.mulechain.crawler.internal;
 
 import com.mule.mulechain.crawler.internal.helpers.crawlingHelper;
+import org.jsoup.UnsupportedMimeTypeException;
 import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
 import org.mule.runtime.extension.api.annotation.Alias;
 import org.mule.runtime.extension.api.annotation.param.Config;
 import org.mule.runtime.extension.api.annotation.param.MediaType;
@@ -64,6 +63,8 @@ public class MulechainwebcrawlerOperations {
     return jsonResult;
   }
 
+
+  /* NO LONGER NEEDED - USE Page Insights instead to get links
   @MediaType(value = ANY, strict = false)
   @Alias("Get-links")
   public String getWebsiteLinks(
@@ -73,9 +74,11 @@ public class MulechainwebcrawlerOperations {
     // get page as a document
     Document document = crawlingHelper.getDocument(url);
 
-    return crawlingHelper.convertToJSON(crawlingHelper.getInternalCrawlPageLinks(document));
+    return crawlingHelper.convertToJSON(crawlingHelper.(document));
 
   }
+
+   */
 
 
   @MediaType(value = ANY, strict = false)
@@ -92,25 +95,56 @@ public class MulechainwebcrawlerOperations {
   @MediaType(value = ANY, strict = false)
   @Alias("Download-image")
   public String downloadWebsiteImages (
-                             @DisplayName("Website URL") @Placement(order = 1) @Example("https://mac-project.ai/docs") String url,
+                             @DisplayName("Website Or Image URL") @Placement(order = 1) @Example("https://mac-project.ai/docs") String url,
                              @DisplayName("Download Location") @Placement(order = 2) @Example("/users/mulesoft/downloads") String downloadPath) throws IOException {
 
-    Document document = crawlingHelper.getDocument(url);
+    String result = "";
 
-    return crawlingHelper.convertToJSON(downloadImage(document, downloadPath));
+    try {
+      // url provided is a website url, so download all images from this document
+      Document document = crawlingHelper.getDocument(url);
+      result = crawlingHelper.convertToJSON(downloadWebsiteImages(document, downloadPath));
+    }
+    catch (UnsupportedMimeTypeException e) {
+      // url provided is direct link to image, so download single image
 
+      Map<String, String> linkFileMap = new HashMap<>();
+      linkFileMap.put(url, downloadSingleImage(url, downloadPath));
+      result = crawlingHelper.convertToJSON(linkFileMap);
+    }
+    return result;
   }
 
 
   @MediaType(value = ANY, strict = false)
   @Alias("Get-page-insights")
-  public String getAnalysis (
+  public String getPageInsights(
+          @Config MulechainwebcrawlerConfiguration configuration,
           @DisplayName("Page Url") @Placement(order = 1) @Example("https://mac-project.ai/docs") String url) throws IOException {
     LOGGER.info("Analyze page");
 
     Document document = crawlingHelper.getDocument(url);
 
-    return crawlingHelper.convertToJSON(crawlingHelper.getPageAnalysis(document));
+    return crawlingHelper.convertToJSON(crawlingHelper.getPageInsights(document, configuration.getTags(), crawlingHelper.PageStatType.ALL));
+  }
+
+
+  @MediaType(value = ANY, strict = false)
+  @Alias("Get-page-content")
+  public String getPageContent(
+          @Config MulechainwebcrawlerConfiguration configuration,
+          @DisplayName("Page Url") @Placement(order = 1) @Example("https://mac-project.ai/docs") String url) throws IOException {
+    LOGGER.info("Get page content");
+
+    Map<String, String> contents = new HashMap<String, String>();
+
+    Document document = crawlingHelper.getDocument(url);
+
+    contents.put("url", document.baseUri());
+    contents.put("title", document.title());
+    contents.put("content", crawlingHelper.getPageContent(document, configuration.getTags()));
+
+    return crawlingHelper.convertToJSON(contents);
   }
 
 
@@ -178,7 +212,7 @@ public class MulechainwebcrawlerOperations {
     }
 
     // crawl current page
-    StringBuilder collectedText = new StringBuilder();
+
 
     try {
       visitedLinks.add(url);
@@ -191,25 +225,12 @@ public class MulechainwebcrawlerOperations {
       String title = document.title();
 
 
-      // check if crawl should only iterate over specified tags and extract contents from these tags only
-      if (tags != null && !tags.isEmpty()) {
-        for (String selector : tags) {
-          Elements elements = document.select(selector);
-          for (Element element : elements) {
-            collectedText.append(element.text());
-          }
-        }
-      }
-      else {
-        // Extract the text content of the page and add it to the collected text
-        String textContent = document.text();
-        collectedText.append(textContent);
-      }
+
 
       // check if need to download images in the current page
       if (downloadImages) {
         LOGGER.info("Downloading images for : " + url);
-        downloadImage(document, downloadPath);
+        downloadWebsiteImages(document, downloadPath);
       }
 
       // Create JSON object for the current page
@@ -227,13 +248,14 @@ public class MulechainwebcrawlerOperations {
       }
 
 
-      // add page content results
-      pageData.put("content", collectedText.toString());
-      //pageResults.add(pageData);
+      // get page contents
+      pageData.put("content", crawlingHelper.getPageContent(document,tags));
 
+
+      // save gathered data to  file
       String filename = savePageContents(pageData, downloadPath, title);
 
-      // add basic meta-data into returning payload map
+      // add basic meta-data into returning-payload map
       Map<String, String> summaryDat = new HashMap<>();
       summaryDat.put("url", url);
       summaryDat.put("title", title);
@@ -259,7 +281,14 @@ public class MulechainwebcrawlerOperations {
       // If not at max depth, find and crawl the links on the page
       if (depth < maxDepth) {
         // get all links on the current page
-        Set<String> links = crawlingHelper.getInternalCrawlPageLinks(document);
+        Set<String> links = new HashSet<>();
+
+        Map<String, Object> linksMap  = (Map<String, Object>)  crawlingHelper.getPageInsights(document, null, crawlingHelper.PageStatType.INTERNALLINKS).get("links");
+        if (linksMap != null) {
+          links = (Set<String>) linksMap.get("internal");  // Cast to Set<String>
+        }
+
+
         for (String nextUrl : links) {
           // start crawl of the next page (nextUrl)
           startCrawling(nextUrl, depth + 1, maxDepth, visitedLinks, downloadImages, downloadPath, tags, getMetaTags, crawlSummaryResult);
@@ -271,97 +300,105 @@ public class MulechainwebcrawlerOperations {
     }
   }
 
-  private List<String> downloadImage(Document document, String saveDirectory) throws IOException {
-
+  private Map<String, String> downloadWebsiteImages(Document document, String saveDirectory) throws IOException {
     // List to store image URLs
-    List<String> imageUrls = new ArrayList<>();
+    Set<String> imageUrls = new HashSet<>();
+
+    Map<String, String> linkFileMap = new HashMap<>();
+
+    Map<String, Object> linksMap  = (Map<String, Object>)  crawlingHelper.getPageInsights(document, null, crawlingHelper.PageStatType.IMAGELINKS).get("links");
+    if (linksMap != null) {
+      imageUrls = (Set<String>) linksMap.get("images");  // Cast to Set<String>
+    }
 
     // Save all images found on the page
-    Elements images = document.select("img[src]");
-    LOGGER.info("Number of img[src] elements found : " + images.size());
-    for (Element img : images) {
-      String imageUrl = img.absUrl("src");
-
-      imageUrls.add(imageUrl);
-
-      LOGGER.info("Found image : " + imageUrl);
-      try {
-        // Check if the URL is a Data URL
-        if (imageUrl.startsWith("data:image/")) {
-          // Extract base64 data from the Data URL
-          String base64Data = imageUrl.substring(imageUrl.indexOf(",") + 1);
-
-          if (base64Data.isEmpty()) {
-            LOGGER.info("Base64 data is empty for URL: " + imageUrl);
-            continue;
-          }
-
-          // Decode the base64 data
-          byte[] imageBytes;
-
-          try {
-            imageBytes = Base64.getDecoder().decode(base64Data);
-          } catch (IllegalArgumentException e) {
-            LOGGER.info("Error decoding base64 data: " + e.getMessage());
-            continue;
-          }
-
-          if (imageBytes.length == 0) {
-            LOGGER.info("Decoded image bytes are empty for URL: " + imageUrl);
-            continue;
-          }
-
-          // Determine the file extension from the Data URL
-          String fileType = imageUrl.substring(5, imageUrl.indexOf(";"));
-          String fileExtension = fileType.split("/")[1];
-
-          // Generate a unique filename using the current timestamp
-          String timestamp = new SimpleDateFormat("yyyyMMddHHmmssSSS").format(new Date());
-          String fileName = "image_" + timestamp + "." + fileExtension;
-          File file = new File(saveDirectory, fileName);
-
-          // Ensure the directory exists
-          file.getParentFile().mkdirs();
-
-          // Write the decoded bytes to the file
-          try (FileOutputStream out = new FileOutputStream(file)) {
-            out.write(imageBytes);
-            LOGGER.info("DataImage saved: " + file.getAbsolutePath());
-          }
-        } else {
-          // Handle standard image URLs
-          URL url = new URL(imageUrl);
-
-          // Extract the 'url' parameter from the query string
-          String decodedUrl = crawlingHelper.extractAndDecodeUrl(imageUrl);
-          // Extract the filename from the decoded URL
-          String fileName = crawlingHelper.extractFileNameFromUrl(decodedUrl);
-
-          //String fileName = decodedUrl.substring(imageUrl.lastIndexOf("/") + 1);
-          File file = new File(saveDirectory, fileName);
-
-          // Ensure the directory exists
-          file.getParentFile().mkdirs();
-
-          // Download and save the image
-          try (InputStream in = url.openStream();
-               FileOutputStream out = new FileOutputStream(file)) {
-
-            byte[] buffer = new byte[1024];
-            int bytesRead;
-            while ((bytesRead = in.read(buffer)) != -1) {
-              out.write(buffer, 0, bytesRead);
-            }
-          }
-          LOGGER.info("Image saved: " + file.getAbsolutePath());
-
-        }
-      } catch (IOException e) {
-        LOGGER.error("Error saving image: " + imageUrl);
-        throw e;
-      }
+    LOGGER.info("Number of img[src] elements found : " + imageUrls.size());
+    for (String imageUrl : imageUrls) {
+      linkFileMap.put(imageUrl, downloadSingleImage(imageUrl, saveDirectory));
     }
-    return imageUrls;
+    return linkFileMap;
+  }
+
+  private String downloadSingleImage(String imageUrl, String saveDirectory) throws IOException{
+    LOGGER.info("Found image : " + imageUrl);
+    File file;
+    try {
+      // Check if the URL is a Data URL
+      if (imageUrl.startsWith("data:image/")) {
+        // Extract base64 data from the Data URL
+        String base64Data = imageUrl.substring(imageUrl.indexOf(",") + 1);
+
+        if (base64Data.isEmpty()) {
+          LOGGER.info("Base64 data is empty for URL: " + imageUrl);
+          return "";
+        }
+
+        // Decode the base64 data
+        byte[] imageBytes;
+
+        try {
+          imageBytes = Base64.getDecoder().decode(base64Data);
+        } catch (IllegalArgumentException e) {
+          LOGGER.info("Error decoding base64 data: " + e.getMessage());
+          return "";
+        }
+
+        if (imageBytes.length == 0) {
+          LOGGER.info("Decoded image bytes are empty for URL: " + imageUrl);
+          return "";
+        }
+
+        // Determine the file extension from the Data URL
+        String fileType = imageUrl.substring(5, imageUrl.indexOf(";"));
+        String fileExtension = fileType.split("/")[1];
+
+        // Generate a unique filename using the current timestamp
+        String timestamp = new SimpleDateFormat("yyyyMMddHHmmssSSS").format(new Date());
+        String fileName = "image_" + timestamp + "." + fileExtension;
+        file = new File(saveDirectory, fileName);
+
+        // Ensure the directory exists
+        file.getParentFile().mkdirs();
+
+        // Write the decoded bytes to the file
+        try (FileOutputStream out = new FileOutputStream(file)) {
+          out.write(imageBytes);
+          LOGGER.info("DataImage saved: " + file.getAbsolutePath());
+        }
+      } else {
+        // Handle standard image URLs
+        URL url = new URL(imageUrl);
+
+        // Extract the 'url' parameter from the query string
+        String decodedUrl = crawlingHelper.extractAndDecodeUrl(imageUrl);
+        // Extract the filename from the decoded URL
+        String fileName = crawlingHelper.extractFileNameFromUrl(decodedUrl);
+
+        //String fileName = decodedUrl.substring(imageUrl.lastIndexOf("/") + 1);
+        file = new File(saveDirectory, fileName);
+
+        // Ensure the directory exists
+        file.getParentFile().mkdirs();
+
+        // Download and save the image
+        try (InputStream in = url.openStream();
+             FileOutputStream out = new FileOutputStream(file)) {
+
+          byte[] buffer = new byte[1024];
+          int bytesRead;
+          while ((bytesRead = in.read(buffer)) != -1) {
+            out.write(buffer, 0, bytesRead);
+          }
+        }
+        LOGGER.info("Image saved: " + file.getAbsolutePath());
+
+      }
+    } catch (IOException e) {
+      LOGGER.error("Error saving image: " + imageUrl);
+      throw e;
+    }
+
+    return file.getPath();
   }
 }
 

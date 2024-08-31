@@ -13,14 +13,21 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class crawlingHelper {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(crawlingHelper.class);
+
+    public enum PageStatType {
+        ALL,
+        INTERNALLINKS,
+        EXTERNALLINKS,
+        REFERENCELINKS,
+        IMAGELINKS,
+        ELEMENTCOUNTSTATS
+    }
+
 
     /*
     private static String getTitle(String url, String outputFolder) throws IOException{
@@ -124,72 +131,116 @@ public class crawlingHelper {
         return metaTagData;
     }
 
-    public static Map<String, Object> getPageAnalysis(Document document) throws MalformedURLException{
+    public static Map<String, Object> getPageInsights(Document document, List<String> tags, PageStatType statType) throws MalformedURLException{
         // Map to store page analysis
         Map<String, Object> pageAnalysisData = new HashMap<>();
 
 
-        // links
+        // links set
         Set<String> internalLinks = new HashSet<>();
         Set<String> externalLinks = new HashSet<>();
         Set<String> referenceLinks = new HashSet<>();
-        String baseUrl = document.baseUri();
-        // Select all anchor tags with href attributes
-        Elements links = document.select("a[href]");
-        for (Element link : links) {
-            String href = link.absUrl("href"); // get absolute URLs
-            if (isExternalLink(baseUrl, href)) {
-                externalLinks.add(href);
-            }
-            else if (isReferenceLink(baseUrl, href)) {
-                referenceLinks.add(href);
-            }
-            else {
-                internalLinks.add(href);
-            }
-        }
 
-        // images
+        // image-links set
         Set<String> imageLinks = new HashSet<>();
-        Elements images = document.select("img[src]");
-        for (Element img : images) {
-            String imageUrl = img.absUrl("src");
-            imageLinks.add(imageUrl);
-        }
 
-        // element stats
-        String[] elementsToCount = {"div", "p", "h1", "h2", "h3", "h4", "h5"};
-        // Map to store the element counts
-        Map<String, Integer> elementCounts = new HashMap<>();
-        // Loop through each element type and count its occurrences
-        for (String tag : elementsToCount) {
-            Elements elements = document.select(tag);
-            elementCounts.put(tag, elements.size());
-        }
-
-        // add to Map
+        // All links Map
         Map<String, Set> linksMap = new HashMap<>();
 
+        // Map to store the element counts
+        Map<String, Integer> elementCounts = new HashMap<>();
 
 
-        linksMap.put("internal", internalLinks);
-        linksMap.put("external", externalLinks);
-        linksMap.put("reference", referenceLinks);
-        linksMap.put("images", imageLinks);
+        String baseUrl = document.baseUri();
+
+        if (statType == PageStatType.ALL || statType == PageStatType.INTERNALLINKS || statType == PageStatType.REFERENCELINKS || statType == PageStatType.EXTERNALLINKS) {
+            // Select all anchor tags with href attributes
+            Elements links = document.select("a[href]");
+            for (Element link : links) {
+                String href = link.absUrl("href"); // get absolute URLs
+                if (isExternalLink(baseUrl, href)) {
+                    externalLinks.add(href);
+                } else if (isReferenceLink(baseUrl, href)) {
+                    referenceLinks.add(href);
+                } else {
+                    internalLinks.add(href);
+                }
+            }
+
+            if (statType == PageStatType.ALL || statType == PageStatType.INTERNALLINKS)
+                linksMap.put("internal", internalLinks);
+            if (statType == PageStatType.ALL || statType == PageStatType.EXTERNALLINKS)
+                linksMap.put("external", externalLinks);
+            if (statType == PageStatType.ALL || statType == PageStatType.REFERENCELINKS)
+                linksMap.put("reference", referenceLinks);
+        }
 
 
-        elementCounts.put("internal", internalLinks.size());
-        elementCounts.put("external", externalLinks.size());
-        elementCounts.put("reference", referenceLinks.size());
-        elementCounts.put("images", imageLinks.size());
-        elementCounts.put("wordCount", countWords(document.text()));
+        if (statType == PageStatType.ALL || statType == PageStatType.IMAGELINKS) {
+                // images
+
+            Elements images = document.select("img[src]");
+            for (Element img : images) {
+                String imageUrl = img.absUrl("src");
+                imageLinks.add(imageUrl);
+            }
+
+            linksMap.put("images", imageLinks);
+
+        }
+
+        if (statType == PageStatType.ALL || statType == PageStatType.ELEMENTCOUNTSTATS) {
+            String[] elementsToCount = {"div", "p", "h1", "h2", "h3", "h4", "h5"}; // default list of elements to retrieve stats for
+
+            if (tags != null && !tags.isEmpty()) {
+                elementsToCount = tags.toArray(new String[tags.size()]);
+            }
+
+            // Loop through each element type and count its occurrences
+            for (String tag : elementsToCount) {
+                Elements elements = document.select(tag);
+                elementCounts.put(tag, elements.size());
+            }
+
+            elementCounts.put("internal", internalLinks.size());
+            elementCounts.put("external", externalLinks.size());
+            elementCounts.put("reference", referenceLinks.size());
+            elementCounts.put("images", imageLinks.size());
+            elementCounts.put("wordCount", countWords(document.text()));
+
+            pageAnalysisData.put("pageStats", elementCounts);
+        }
 
         pageAnalysisData.put("url", document.baseUri());
         pageAnalysisData.put("title", document.title());
-        pageAnalysisData.put("links", linksMap);
-        pageAnalysisData.put("pageStats", elementCounts);
+
+        // only add links if any of the types in condition has been requested
+        if (statType == PageStatType.ALL || statType == PageStatType.INTERNALLINKS || statType == PageStatType.REFERENCELINKS || statType == PageStatType.EXTERNALLINKS || statType == PageStatType.IMAGELINKS)
+            pageAnalysisData.put("links", linksMap);
 
         return pageAnalysisData;
+    }
+
+    public static String getPageContent(Document document, List<String> tags) {
+
+        StringBuilder collectedText = new StringBuilder();
+
+        // check if crawl should only iterate over specified tags and extract contents from these tags only
+        if (tags != null && !tags.isEmpty()) {
+            for (String selector : tags) {
+                Elements elements = document.select(selector);
+                for (Element element : elements) {
+                    collectedText.append(element.text()).append(" ");
+                }
+            }
+        }
+        else {
+            // Extract the text content of the page and add it to the collected text
+            String textContent = document.text();
+            collectedText.append(textContent);
+        }
+
+        return collectedText.toString().trim();
     }
 
     // Method to count words in a given text
@@ -202,6 +253,7 @@ public class crawlingHelper {
         return words.length;
     }
 
+    /*
     public static Set<String> getInternalCrawlPageLinks(Document document) throws MalformedURLException {
         // initialise variables
         Set<String> internalLinks = new HashSet<>();
@@ -231,6 +283,8 @@ public class crawlingHelper {
 
         return internalLinks;
     }
+
+     */
 
     public static String getSanitizedFilename(String title) {
         // Replace invalid characters with underscores
