@@ -6,12 +6,12 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLDecoder;
+import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -19,6 +19,8 @@ import java.util.Map;
 import java.util.Set;
 
 public class crawlingHelper {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(crawlingHelper.class);
 
     /*
     private static String getTitle(String url, String outputFolder) throws IOException{
@@ -91,7 +93,8 @@ public class crawlingHelper {
     public static String convertToJSON(Object contentToSerialize) throws JsonProcessingException{
         // Convert the result to JSON
         ObjectMapper mapper = new ObjectMapper();
-        return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(contentToSerialize);
+        //return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(contentToSerialize);
+        return mapper.writeValueAsString(contentToSerialize);
     }
 
 
@@ -121,25 +124,106 @@ public class crawlingHelper {
         return metaTagData;
     }
 
-    public static Set<String> getInternalPageLinks(Document document) throws MalformedURLException {
+    public static Map<String, Object> getPageAnalysis(Document document) throws MalformedURLException{
+        // Map to store page analysis
+        Map<String, Object> pageAnalysisData = new HashMap<>();
+
+
+        // links
+        Set<String> internalLinks = new HashSet<>();
+        Set<String> externalLinks = new HashSet<>();
+        Set<String> referenceLinks = new HashSet<>();
+        String baseUrl = document.baseUri();
+        // Select all anchor tags with href attributes
+        Elements links = document.select("a[href]");
+        for (Element link : links) {
+            String href = link.absUrl("href"); // get absolute URLs
+            if (isExternalLink(baseUrl, href)) {
+                externalLinks.add(href);
+            }
+            else if (isReferenceLink(baseUrl, href)) {
+                referenceLinks.add(href);
+            }
+            else {
+                internalLinks.add(href);
+            }
+        }
+
+        // images
+        Set<String> imageLinks = new HashSet<>();
+        Elements images = document.select("img[src]");
+        for (Element img : images) {
+            String imageUrl = img.absUrl("src");
+            imageLinks.add(imageUrl);
+        }
+
+        // element stats
+        String[] elementsToCount = {"div", "p", "h1", "h2", "h3", "h4", "h5"};
+        // Map to store the element counts
+        Map<String, Integer> elementCounts = new HashMap<>();
+        // Loop through each element type and count its occurrences
+        for (String tag : elementsToCount) {
+            Elements elements = document.select(tag);
+            elementCounts.put(tag, elements.size());
+        }
+
+        // add to Map
+        Map<String, Set> linksMap = new HashMap<>();
+
+
+
+        linksMap.put("internal", internalLinks);
+        linksMap.put("external", externalLinks);
+        linksMap.put("reference", referenceLinks);
+        linksMap.put("images", imageLinks);
+
+
+        elementCounts.put("internal", internalLinks.size());
+        elementCounts.put("external", externalLinks.size());
+        elementCounts.put("reference", referenceLinks.size());
+        elementCounts.put("images", imageLinks.size());
+        elementCounts.put("wordCount", countWords(document.text()));
+
+        pageAnalysisData.put("url", document.baseUri());
+        pageAnalysisData.put("title", document.title());
+        pageAnalysisData.put("links", linksMap);
+        pageAnalysisData.put("pageStats", elementCounts);
+
+        return pageAnalysisData;
+    }
+
+    // Method to count words in a given text
+    private static int countWords(String text) {
+        if (text == null || text.trim().isEmpty()) {
+            return 0;
+        }
+        // Split the text by whitespace and count the words
+        String[] words = text.trim().split("\\s+");
+        return words.length;
+    }
+
+    public static Set<String> getInternalCrawlPageLinks(Document document) throws MalformedURLException {
         // initialise variables
         Set<String> internalLinks = new HashSet<>();
 
         String baseUrl = document.baseUri();
-        // Extract the base domain from the base URI
-        URL parsedUrl = new URL(baseUrl);
-        String baseDomain = parsedUrl.getHost();
+
 
         // Select all anchor tags with href attributes
         Elements links = document.select("a[href]");
 
         // Iterate over the selected elements and add each link to the HashSet
         for (Element link : links) {
-            //pageLinks.add(link.attr("abs:href")); // get absolute URLs  //link.absUrl("href");
-            String href = link.absUrl("href");
+            //pageLinks.add(link.attr("abs:href"));   //link.absUrl("href");
+            String href = link.absUrl("href"); // get absolute URLs
 
-            if (href.contains(baseDomain)) {
+            // Check if the link is an internal link and is not a reference link
+            //if (href.contains(baseDomain) && !isReferenceLink(baseUrl, href)) {
+            if (!isExternalLink(baseUrl, href) && !isReferenceLink(baseUrl, href)) {
                 internalLinks.add(href);
+            }
+            else {
+                LOGGER.warn("Ignoring External or Reference link: " + href);
             }
 
             //pageLinks.add(link.absUrl("href")); // get absolute URLs  //link.absUrl("href");
@@ -151,5 +235,30 @@ public class crawlingHelper {
     public static String getSanitizedFilename(String title) {
         // Replace invalid characters with underscores
         return title.replaceAll("[\\\\/:*?\"<>|]", "_").replaceAll(" ", "");
+    }
+
+    // Method to determine if a link is a reference link to the same page
+    // baseUrl: "https://docs.mulesoft.com/cloudhub-2/ch2-architecture"
+    // linkToCheck: "https://docs.mulesoft.com/cloudhub-2/ch2-architecture#cluster-nodes"
+    private static boolean isReferenceLink(String baseUrl, String linkToCheck) {
+        try {
+            URI baseUri = new URI(baseUrl);
+            URI linkUri = new URI(linkToCheck);
+
+            // Check if the base path and link path are the same
+            return baseUri.getPath().equals(linkUri.getPath()) && linkUri.getFragment() != null;
+        } catch (URISyntaxException e) {
+            LOGGER.error(e.toString());
+            return false;
+        }
+    }
+
+    private static boolean isExternalLink(String baseUrl, String linkToCheck) throws MalformedURLException {
+        // Extract the base domain from the base URI
+        URL parsedUrl = new URL(baseUrl);
+        String baseDomain = parsedUrl.getHost();
+
+        return !linkToCheck.contains(baseDomain);
+
     }
 }

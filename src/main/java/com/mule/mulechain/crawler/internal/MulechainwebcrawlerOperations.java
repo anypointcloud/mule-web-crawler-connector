@@ -65,7 +65,7 @@ public class MulechainwebcrawlerOperations {
   }
 
   @MediaType(value = ANY, strict = false)
-  @Alias("Get-website-links")
+  @Alias("Get-links")
   public String getWebsiteLinks(
                              @DisplayName("Website URL") @Placement(order = 1) @Example("https://mac-project.ai/docs") String url) throws IOException {
     LOGGER.info("Website get-links action");
@@ -73,13 +73,13 @@ public class MulechainwebcrawlerOperations {
     // get page as a document
     Document document = crawlingHelper.getDocument(url);
 
-    return crawlingHelper.convertToJSON(crawlingHelper.getInternalPageLinks(document));
+    return crawlingHelper.convertToJSON(crawlingHelper.getInternalCrawlPageLinks(document));
 
   }
 
 
   @MediaType(value = ANY, strict = false)
-  @Alias("Get-website-metatags")
+  @Alias("Get-meta-tags")
   public String getMetaTags (
                             @DisplayName("Website URL") @Placement(order = 1) @Example("https://mac-project.ai/docs") String url) throws IOException {
     LOGGER.info("Get meta tags");
@@ -90,7 +90,7 @@ public class MulechainwebcrawlerOperations {
   }
 
   @MediaType(value = ANY, strict = false)
-  @Alias("Download-website-images")
+  @Alias("Download-image")
   public String downloadWebsiteImages (
                              @DisplayName("Website URL") @Placement(order = 1) @Example("https://mac-project.ai/docs") String url,
                              @DisplayName("Download Location") @Placement(order = 2) @Example("/users/mulesoft/downloads") String downloadPath) throws IOException {
@@ -100,6 +100,20 @@ public class MulechainwebcrawlerOperations {
     return crawlingHelper.convertToJSON(downloadImage(document, downloadPath));
 
   }
+
+
+  @MediaType(value = ANY, strict = false)
+  @Alias("Get-page-insights")
+  public String getAnalysis (
+          @DisplayName("Page Url") @Placement(order = 1) @Example("https://mac-project.ai/docs") String url) throws IOException {
+    LOGGER.info("Analyze page");
+
+    Document document = crawlingHelper.getDocument(url);
+
+    return crawlingHelper.convertToJSON(crawlingHelper.getPageAnalysis(document));
+  }
+
+
 
 
   /*
@@ -245,7 +259,7 @@ public class MulechainwebcrawlerOperations {
       // If not at max depth, find and crawl the links on the page
       if (depth < maxDepth) {
         // get all links on the current page
-        Set<String> links = crawlingHelper.getInternalPageLinks(document);
+        Set<String> links = crawlingHelper.getInternalCrawlPageLinks(document);
         for (String nextUrl : links) {
           // start crawl of the next page (nextUrl)
           startCrawling(nextUrl, depth + 1, maxDepth, visitedLinks, downloadImages, downloadPath, tags, getMetaTags, crawlSummaryResult);

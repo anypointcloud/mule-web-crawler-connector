@@ -2077,9 +2077,10 @@ table.CodeRay td.code>pre{padding:0}
 <li><a href="#_operations">Operations</a>
 <ul class="sectlevel2">
 <li><a href="#Crawl-website">Crawl Website</a></li>
-<li><a href="#Download-website-images">Download Website Images</a></li>
-<li><a href="#Get-website-links">Get Website Links</a></li>
-<li><a href="#Get-website-metatags">Get Website Metatags</a></li>
+<li><a href="#Download-image">Download Image</a></li>
+<li><a href="#Get-links">Get Links</a></li>
+<li><a href="#Get-meta-tags">Get Meta Tags</a></li>
+<li><a href="#Get-page-insights">Get Page Insights</a></li>
 </ul>
 </li>
 <li><a href="#_types">Types</a>
@@ -2316,9 +2317,9 @@ Example of an operation that uses the configuration and a connection instance to
 </div>
 </div>
 <div class="sect2">
-<h3 id="Download-website-images">Download Website Images</h3>
+<h3 id="Download-image">Download Image</h3>
 <div class="paragraph">
-<p><code>&lt;mac-web-crawler:download-website-images&gt;</code></p>
+<p><code>&lt;mac-web-crawler:download-image&gt;</code></p>
 </div>
 <div class="sect3">
 <h4 id="_parameters_3">Parameters</h4>
@@ -2407,9 +2408,9 @@ Example of an operation that uses the configuration and a connection instance to
 </div>
 </div>
 <div class="sect2">
-<h3 id="Get-website-links">Get Website Links</h3>
+<h3 id="Get-links">Get Links</h3>
 <div class="paragraph">
-<p><code>&lt;mac-web-crawler:get-website-links&gt;</code></p>
+<p><code>&lt;mac-web-crawler:get-links&gt;</code></p>
 </div>
 <div class="sect3">
 <h4 id="_parameters_4">Parameters</h4>
@@ -2489,9 +2490,9 @@ Example of an operation that uses the configuration and a connection instance to
 </div>
 </div>
 <div class="sect2">
-<h3 id="Get-website-metatags">Get Website Metatags</h3>
+<h3 id="Get-meta-tags">Get Meta Tags</h3>
 <div class="paragraph">
-<p><code>&lt;mac-web-crawler:get-website-metatags&gt;</code></p>
+<p><code>&lt;mac-web-crawler:get-meta-tags&gt;</code></p>
 </div>
 <div class="sect3">
 <h4 id="_parameters_5">Parameters</h4>
@@ -2554,6 +2555,88 @@ Example of an operation that uses the configuration and a connection instance to
 </div>
 <div class="sect3">
 <h4 id="_output_4">Output</h4>
+<table class="tableblock frame-all grid-all spread">
+<colgroup>
+<col style="width: 50%;">
+<col style="width: 50%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-middle"><p class="tableblock"><strong>Type</strong></p></td>
+<td class="tableblock halign-left valign-middle"><div><div class="paragraph">
+<p>String</p>
+</div></div></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="Get-page-insights">Get Page Insights</h3>
+<div class="paragraph">
+<p><code>&lt;mac-web-crawler:get-page-insights&gt;</code></p>
+</div>
+<div class="sect3">
+<h4 id="_parameters_6">Parameters</h4>
+<table class="tableblock frame-all grid-all spread">
+<colgroup>
+<col style="width: 20%;">
+<col style="width: 20%;">
+<col style="width: 35%;">
+<col style="width: 20%;">
+<col style="width: 5%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-middle">Name</th>
+<th class="tableblock halign-left valign-middle">Type</th>
+<th class="tableblock halign-left valign-middle">Description</th>
+<th class="tableblock halign-left valign-middle">Default Value</th>
+<th class="tableblock halign-center valign-middle">Required</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-middle"><p class="tableblock">Page Url</p></td>
+<td class="tableblock halign-left valign-middle"><div><div class="paragraph">
+<p>String</p>
+</div></div></td>
+<td class="tableblock halign-left valign-middle"></td>
+<td class="tableblock halign-left valign-middle"></td>
+<td class="tableblock halign-center valign-middle"><p class="tableblock"><strong>x</strong>&#160;</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-middle"><p class="tableblock">Output Mime Type</p></td>
+<td class="tableblock halign-left valign-middle"><div><div class="paragraph">
+<p>String</p>
+</div></div></td>
+<td class="tableblock halign-left valign-middle"><p class="tableblock">The mime type of the payload that this operation outputs.</p></td>
+<td class="tableblock halign-left valign-middle"></td>
+<td class="tableblock halign-center valign-middle"><p class="tableblock">&#160;</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-middle"><p class="tableblock">Target Variable</p></td>
+<td class="tableblock halign-left valign-middle"><div><div class="paragraph">
+<p>String</p>
+</div></div></td>
+<td class="tableblock halign-left valign-middle"><p class="tableblock">The name of a variable on which the operation's output will be placed</p></td>
+<td class="tableblock halign-left valign-middle"></td>
+<td class="tableblock halign-center valign-middle"><p class="tableblock">&#160;</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-middle"><p class="tableblock">Target Value</p></td>
+<td class="tableblock halign-left valign-middle"><div><div class="paragraph">
+<p>String</p>
+</div></div></td>
+<td class="tableblock halign-left valign-middle"><p class="tableblock">An expression that will be evaluated against the operation's output and the outcome of that expression will be stored in the target variable</p></td>
+<td class="tableblock halign-left valign-middle"><p class="tableblock">#[payload]</p></td>
+<td class="tableblock halign-center valign-middle"><p class="tableblock">&#160;</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect3">
+<h4 id="_output_5">Output</h4>
 <table class="tableblock frame-all grid-all spread">
 <colgroup>
 <col style="width: 50%;">
