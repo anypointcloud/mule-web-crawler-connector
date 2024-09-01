@@ -155,9 +155,9 @@ Example of an operation that uses the configuration and a connection instance to
 
 
 
-[[Get-meta-tags]]
-=== Get Meta Tags
-`<mac-web-crawler:get-meta-tags>`
+[[Get-page-meta-tags]]
+=== Get Page Meta Tags
+`<mac-web-crawler:get-page-meta-tags>`
 
 
 ==== Parameters
@@ -165,6 +165,31 @@ Example of an operation that uses the configuration and a connection instance to
 |======================
 | Name | Type | Description | Default Value | Required
 | Website URL a| String |  |  | *x*{nbsp}
+| Output Mime Type a| String |  +++The mime type of the payload that this operation outputs.+++ |  | {nbsp}
+| Target Variable a| String |  +++The name of a variable on which the operation's output will be placed+++ |  | {nbsp}
+| Target Value a| String |  +++An expression that will be evaluated against the operation's output and the outcome of that expression will be stored in the target variable+++ |  +++#[payload]+++ | {nbsp}
+|======================
+
+==== Output
+[cols=".^50%,.^50%"]
+|======================
+| *Type* a| String
+|======================
+
+
+
+
+[[Get-sitemap]]
+=== Get Sitemap
+`<mac-web-crawler:get-sitemap>`
+
+
+==== Parameters
+[cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
+|======================
+| Name | Type | Description | Default Value | Required
+| Website URL a| String |  |  | *x*{nbsp}
+| Maximum Depth a| Number |  |  | *x*{nbsp}
 | Output Mime Type a| String |  +++The mime type of the payload that this operation outputs.+++ |  | {nbsp}
 | Target Variable a| String |  +++The name of a variable on which the operation's output will be placed+++ |  | {nbsp}
 | Target Value a| String |  +++An expression that will be evaluated against the operation's output and the outcome of that expression will be stored in the target variable+++ |  +++#[payload]+++ | {nbsp}

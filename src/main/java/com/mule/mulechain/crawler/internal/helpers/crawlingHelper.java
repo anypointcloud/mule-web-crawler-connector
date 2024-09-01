@@ -19,7 +19,7 @@ public class crawlingHelper {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(crawlingHelper.class);
 
-    public enum PageStatType {
+    public enum PageInsightType {
         ALL,
         INTERNALLINKS,
         EXTERNALLINKS,
@@ -29,34 +29,12 @@ public class crawlingHelper {
     }
 
 
-    /*
-    private static String getTitle(String url, String outputFolder) throws IOException{
-        Document doc = connectUrlGetDocument(url);
-        String title = doc.title();
-        //System.out.println("title is: " + title);
-        return title;
-    }
-
-    private static Document connectUrlGetDocument(String url) throws IOException {
-        return Jsoup.connect(url).get();
-    }
-
-     */
-
-
     public static Document getDocument(String url) throws IOException {
         // use jsoup to fetch the current page elements
         Document document = Jsoup.connect(url)
                 //.userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
                 //.referrer("http://www.google.com")  // to prevent "HTTP error fetching URL. Status=403" error
                 .get();
-
-    /*
-    Elements elements = document.select(selector);
-    for (Element element : elements) {
-      collectedText.append(element.text()).append("\n");
-    }
-     */
 
         return document;
     }
@@ -131,9 +109,9 @@ public class crawlingHelper {
         return metaTagData;
     }
 
-    public static Map<String, Object> getPageInsights(Document document, List<String> tags, PageStatType statType) throws MalformedURLException{
+    public static Map<String, Object> getPageInsights(Document document, List<String> tags, PageInsightType insight) throws MalformedURLException{
         // Map to store page analysis
-        Map<String, Object> pageAnalysisData = new HashMap<>();
+        Map<String, Object> pageInsightData = new HashMap<>();
 
 
         // links set
@@ -153,7 +131,7 @@ public class crawlingHelper {
 
         String baseUrl = document.baseUri();
 
-        if (statType == PageStatType.ALL || statType == PageStatType.INTERNALLINKS || statType == PageStatType.REFERENCELINKS || statType == PageStatType.EXTERNALLINKS) {
+        if (insight == PageInsightType.ALL || insight == PageInsightType.INTERNALLINKS || insight == PageInsightType.REFERENCELINKS || insight == PageInsightType.EXTERNALLINKS) {
             // Select all anchor tags with href attributes
             Elements links = document.select("a[href]");
             for (Element link : links) {
@@ -167,16 +145,16 @@ public class crawlingHelper {
                 }
             }
 
-            if (statType == PageStatType.ALL || statType == PageStatType.INTERNALLINKS)
+            if (insight == PageInsightType.ALL || insight == PageInsightType.INTERNALLINKS)
                 linksMap.put("internal", internalLinks);
-            if (statType == PageStatType.ALL || statType == PageStatType.EXTERNALLINKS)
+            if (insight == PageInsightType.ALL || insight == PageInsightType.EXTERNALLINKS)
                 linksMap.put("external", externalLinks);
-            if (statType == PageStatType.ALL || statType == PageStatType.REFERENCELINKS)
+            if (insight == PageInsightType.ALL || insight == PageInsightType.REFERENCELINKS)
                 linksMap.put("reference", referenceLinks);
         }
 
 
-        if (statType == PageStatType.ALL || statType == PageStatType.IMAGELINKS) {
+        if (insight == PageInsightType.ALL || insight == PageInsightType.IMAGELINKS) {
                 // images
 
             Elements images = document.select("img[src]");
@@ -189,8 +167,8 @@ public class crawlingHelper {
 
         }
 
-        if (statType == PageStatType.ALL || statType == PageStatType.ELEMENTCOUNTSTATS) {
-            String[] elementsToCount = {"div", "p", "h1", "h2", "h3", "h4", "h5"}; // default list of elements to retrieve stats for
+        if (insight == PageInsightType.ALL || insight == PageInsightType.ELEMENTCOUNTSTATS) {
+            String[] elementsToCount = {"div", "p", "h1", "h2", "h3", "h4", "h5"}; // default list of elements to retrieve stats for. Used if no specific tags provided
 
             if (tags != null && !tags.isEmpty()) {
                 elementsToCount = tags.toArray(new String[tags.size()]);
@@ -206,19 +184,19 @@ public class crawlingHelper {
             elementCounts.put("external", externalLinks.size());
             elementCounts.put("reference", referenceLinks.size());
             elementCounts.put("images", imageLinks.size());
-            elementCounts.put("wordCount", countWords(document.text()));
+            elementCounts.put("wordCount", countWords(getPageContent(document,tags)));
 
-            pageAnalysisData.put("pageStats", elementCounts);
+            pageInsightData.put("pageStats", elementCounts);
         }
 
-        pageAnalysisData.put("url", document.baseUri());
-        pageAnalysisData.put("title", document.title());
+        pageInsightData.put("url", document.baseUri());
+        pageInsightData.put("title", document.title());
 
         // only add links if any of the types in condition has been requested
-        if (statType == PageStatType.ALL || statType == PageStatType.INTERNALLINKS || statType == PageStatType.REFERENCELINKS || statType == PageStatType.EXTERNALLINKS || statType == PageStatType.IMAGELINKS)
-            pageAnalysisData.put("links", linksMap);
+        if (insight == PageInsightType.ALL || insight == PageInsightType.INTERNALLINKS || insight == PageInsightType.REFERENCELINKS || insight == PageInsightType.EXTERNALLINKS || insight == PageInsightType.IMAGELINKS)
+            pageInsightData.put("links", linksMap);
 
-        return pageAnalysisData;
+        return pageInsightData;
     }
 
     public static String getPageContent(Document document, List<String> tags) {
@@ -253,38 +231,6 @@ public class crawlingHelper {
         return words.length;
     }
 
-    /*
-    public static Set<String> getInternalCrawlPageLinks(Document document) throws MalformedURLException {
-        // initialise variables
-        Set<String> internalLinks = new HashSet<>();
-
-        String baseUrl = document.baseUri();
-
-
-        // Select all anchor tags with href attributes
-        Elements links = document.select("a[href]");
-
-        // Iterate over the selected elements and add each link to the HashSet
-        for (Element link : links) {
-            //pageLinks.add(link.attr("abs:href"));   //link.absUrl("href");
-            String href = link.absUrl("href"); // get absolute URLs
-
-            // Check if the link is an internal link and is not a reference link
-            //if (href.contains(baseDomain) && !isReferenceLink(baseUrl, href)) {
-            if (!isExternalLink(baseUrl, href) && !isReferenceLink(baseUrl, href)) {
-                internalLinks.add(href);
-            }
-            else {
-                LOGGER.warn("Ignoring External or Reference link: " + href);
-            }
-
-            //pageLinks.add(link.absUrl("href")); // get absolute URLs  //link.absUrl("href");
-        }
-
-        return internalLinks;
-    }
-
-     */
 
     public static String getSanitizedFilename(String title) {
         // Replace invalid characters with underscores
@@ -294,13 +240,18 @@ public class crawlingHelper {
     // Method to determine if a link is a reference link to the same page
     // baseUrl: "https://docs.mulesoft.com/cloudhub-2/ch2-architecture"
     // linkToCheck: "https://docs.mulesoft.com/cloudhub-2/ch2-architecture#cluster-nodes"
+    // If current page has a reference link to another page, this link will not be considered as a reference link
     private static boolean isReferenceLink(String baseUrl, String linkToCheck) {
         try {
             URI baseUri = new URI(baseUrl);
             URI linkUri = new URI(linkToCheck);
 
-            // Check if the base path and link path are the same
-            return baseUri.getPath().equals(linkUri.getPath()) && linkUri.getFragment() != null;
+            // Check if the scheme, host, and path are the same, and the link has a fragment
+            return baseUri.getScheme().equals(linkUri.getScheme()) &&
+                    baseUri.getHost().equals(linkUri.getHost()) &&
+                    baseUri.getPath().equals(linkUri.getPath()) &&
+                    linkUri.getFragment() != null;
+
         } catch (URISyntaxException e) {
             LOGGER.error(e.toString());
             return false;

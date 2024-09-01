@@ -1,5 +1,7 @@
 package com.mule.mulechain.crawler.internal;
 
+import com.mule.mulechain.crawler.internal.helpers.CrawlResult;
+import com.mule.mulechain.crawler.internal.helpers.SiteMapNode;
 import com.mule.mulechain.crawler.internal.helpers.crawlingHelper;
 import org.jsoup.UnsupportedMimeTypeException;
 import org.jsoup.nodes.Document;
@@ -49,40 +51,19 @@ public class MulechainwebcrawlerOperations {
 
 
     // initialise variables
-    Set<String> visitedLinks = new HashSet<>();
+    Set<String> urlContentFetched = new HashSet<>();
+    Map<Integer, Set<String>> visitedLinksByDepth = new HashMap<>();
     List<String> specificTags = configuration.getTags();
-    List<Map<String, String>> crawlSummary = new ArrayList<>(); // for the list of pages crawled and corresponding filename
 
-    // start craw
-    startCrawling(url, 0, maxDepth, visitedLinks, downloadImages, downloadPath, specificTags, getMetaTags, crawlSummary);
-
-    String jsonResult = crawlingHelper.convertToJSON(crawlSummary);
+    CrawlResult root = startCrawling(url, 0, maxDepth, visitedLinksByDepth, urlContentFetched, downloadImages, downloadPath, specificTags, getMetaTags);
 
 
-    // return content as payload
-    return jsonResult;
+    return crawlingHelper.convertToJSON(root);
   }
 
 
-  /* NO LONGER NEEDED - USE Page Insights instead to get links
   @MediaType(value = ANY, strict = false)
-  @Alias("Get-links")
-  public String getWebsiteLinks(
-                             @DisplayName("Website URL") @Placement(order = 1) @Example("https://mac-project.ai/docs") String url) throws IOException {
-    LOGGER.info("Website get-links action");
-
-    // get page as a document
-    Document document = crawlingHelper.getDocument(url);
-
-    return crawlingHelper.convertToJSON(crawlingHelper.(document));
-
-  }
-
-   */
-
-
-  @MediaType(value = ANY, strict = false)
-  @Alias("Get-meta-tags")
+  @Alias("Get-page-meta-tags")
   public String getMetaTags (
                             @DisplayName("Website URL") @Placement(order = 1) @Example("https://mac-project.ai/docs") String url) throws IOException {
     LOGGER.info("Get meta tags");
@@ -90,6 +71,21 @@ public class MulechainwebcrawlerOperations {
     Document document = crawlingHelper.getDocument(url);
 
     return crawlingHelper.convertToJSON(crawlingHelper.getPageMetaTags(document));
+  }
+
+  @MediaType(value = ANY, strict = false)
+  @Alias("Get-sitemap")
+  public String getSiteMap (
+          @DisplayName("Website URL") @Placement(order = 1) @Example("https://mac-project.ai/docs") String url,
+          @DisplayName("Maximum Depth") @Placement(order = 2) @Example("2") int maxDepth) throws IOException {
+    LOGGER.info("Get sitemap");
+
+    // initialise variables
+    Set<String> visitedLinks = new HashSet<>();
+
+    SiteMapNode root = crawlLinks(url, 0, maxDepth, visitedLinks);
+
+    return crawlingHelper.convertToJSON(root);
   }
 
   @MediaType(value = ANY, strict = false)
@@ -125,7 +121,7 @@ public class MulechainwebcrawlerOperations {
 
     Document document = crawlingHelper.getDocument(url);
 
-    return crawlingHelper.convertToJSON(crawlingHelper.getPageInsights(document, configuration.getTags(), crawlingHelper.PageStatType.ALL));
+    return crawlingHelper.convertToJSON(crawlingHelper.getPageInsights(document, configuration.getTags(), crawlingHelper.PageInsightType.ALL));
   }
 
 
@@ -146,30 +142,6 @@ public class MulechainwebcrawlerOperations {
 
     return crawlingHelper.convertToJSON(contents);
   }
-
-
-
-
-  /*
-  private void saveContents(String results, String downloadPath) throws IOException {
-      LOGGER.info("Writing crawled contents to file");
-      // Combine directory and filename into a single File object
-      File file = new File(downloadPath, "crawl-results.json");
-
-      // Ensure the directory exists
-      file.getParentFile().mkdirs();
-
-      // Use try-with-resources to ensure the BufferedWriter is closed automatically
-      // append to file instead of overwriting
-      try (BufferedWriter writer = new BufferedWriter(new FileWriter(file, true))) {
-        writer.write(results);
-        LOGGER.info("File saved successfully to " + file.getAbsolutePath());
-      } catch (IOException e) {
-        LOGGER.info("An error occurred while writing to the file: " + e.getMessage());
-        throw e;
-      }
-  }
-  */
 
 
   private String savePageContents(Object results, String downloadPath, String title) throws IOException {
@@ -199,105 +171,116 @@ public class MulechainwebcrawlerOperations {
       LOGGER.error("An error occurred while writing to the file: " + e.getMessage());
     }
 
-    return fileName;
+    return (file != null) ? file.getName() : "File is null";
   }
 
 
   //private String startCrawling(String url, int depth, int maxDepth, Set<String> visitedLinks, boolean downloadImages, String downloadPath, List<String> tags) {
-  private void startCrawling(String url, int depth, int maxDepth, Set<String> visitedLinks, boolean downloadImages, String downloadPath, List<String> tags, boolean getMetaTags, List<Map<String, String>> crawlSummaryResult) {
+  private CrawlResult startCrawling(String url, int depth, int maxDepth, Map<Integer, Set<String>> visitedLinksByDepth, Set<String> urlContentFetched, boolean downloadImages, String downloadPath, List<String> contentTags, boolean getMetaTags) {
 
     // return if maxDepth reached
-    if (depth > maxDepth || visitedLinks.contains(url)) {
-      return;
+    if (depth > maxDepth) {
+      return null;
     }
 
-    // crawl current page
+    // Initialize the set for the current depth if not already present
+    visitedLinksByDepth.putIfAbsent(depth, new HashSet<>());
 
+    // Check if this URL has already been visited at this depth
+    if (visitedLinksByDepth.get(depth).contains(url)) {
+      return null;
+    }
 
+    // crawl & extract current page
     try {
-      visitedLinks.add(url);
 
-      LOGGER.info("Fetching content for : " + url);
+      // Mark the URL as visited for this depth
+      visitedLinksByDepth.get(depth).add(url);
+
+      CrawlResult node = null;
 
       // get page as a html document
       Document document = crawlingHelper.getDocument(url);
 
-      String title = document.title();
+
+      // check if url contents have been downloaded before
+      if (!urlContentFetched.contains(url)) {
+
+        // add url to uniqueLinks to indicate con
+        urlContentFetched.add(url);
+
+        // Create Map to hold all data for the current page - this will be serialized to JSON and saved to file
+        Map<String, Object> pageData = new HashMap<>();
 
 
+        LOGGER.info("Fetching content for : " + url);
+
+        String title = document.title();
+
+        pageData.put("url", url);
+        pageData.put("title", title);
 
 
-      // check if need to download images in the current page
-      if (downloadImages) {
-        LOGGER.info("Downloading images for : " + url);
-        downloadWebsiteImages(document, downloadPath);
-      }
-
-      // Create JSON object for the current page
-      Map<String, String> pageData = new HashMap<>();
-      pageData.put("url", url);
-      pageData.put("title", title);
-
-
-      // get all meta tags from the document
-      if (getMetaTags) {
-        // Iterating over each entry in the map
-        for (Map.Entry<String, String> entry : crawlingHelper.getPageMetaTags(document).entrySet()) {
-          pageData.put(entry.getKey(), entry.getValue());
+        // check if need to download images in the current page
+        if (downloadImages) {
+          LOGGER.info("Downloading images for : " + url);
+          pageData.put("imageFiles", downloadWebsiteImages(document, downloadPath));
         }
-      }
 
 
-      // get page contents
-      pageData.put("content", crawlingHelper.getPageContent(document,tags));
-
-
-      // save gathered data to  file
-      String filename = savePageContents(pageData, downloadPath, title);
-
-      // add basic meta-data into returning-payload map
-      Map<String, String> summaryDat = new HashMap<>();
-      summaryDat.put("url", url);
-      summaryDat.put("title", title);
-      summaryDat.put("filename", filename);
-
-
-      crawlSummaryResult.add(summaryDat);
-
-
-      /*
-      // If not at max depth, find and crawl the links on the page
-      if (depth < maxDepth) {
-        // get all links on the current page
-        Elements links = document.select("a[href]");
-        for (Element link : links) {
-          String nextUrl = link.absUrl("href");
-          // start crawl of the next page (nextUrl)
-          startCrawling(nextUrl, depth + 1, maxDepth, visitedLinks, downloadImages, downloadPath, tags, getMetaTags, crawlSummaryResult);
+        // get all meta tags from the document
+        if (getMetaTags) {
+          // Iterating over each entry in the map
+          for (Map.Entry<String, String> entry : crawlingHelper.getPageMetaTags(document).entrySet()) {
+            pageData.put(entry.getKey(), entry.getValue());
+          }
         }
+
+
+        // get page contents
+        pageData.put("content", crawlingHelper.getPageContent(document, contentTags));
+
+
+        // save gathered data of page to file
+        String filename = savePageContents(pageData, downloadPath, title);
+
+
+        // Create a new node for this URL
+        node = new CrawlResult(url, filename);
+
+      }
+      else {
+        // content previously downloaded, so setting file name as such
+        node = new CrawlResult(url, "Previously downloaded.");
       }
 
-       */
+
       // If not at max depth, find and crawl the links on the page
-      if (depth < maxDepth) {
+      if (depth <= maxDepth) {
         // get all links on the current page
         Set<String> links = new HashSet<>();
 
-        Map<String, Object> linksMap  = (Map<String, Object>)  crawlingHelper.getPageInsights(document, null, crawlingHelper.PageStatType.INTERNALLINKS).get("links");
+        Map<String, Object> linksMap  = (Map<String, Object>)  crawlingHelper.getPageInsights(document, null, crawlingHelper.PageInsightType.INTERNALLINKS).get("links");
         if (linksMap != null) {
           links = (Set<String>) linksMap.get("internal");  // Cast to Set<String>
         }
 
+        if (links != null) {
+          for (String nextUrl : links) {
 
-        for (String nextUrl : links) {
-          // start crawl of the next page (nextUrl)
-          startCrawling(nextUrl, depth + 1, maxDepth, visitedLinks, downloadImages, downloadPath, tags, getMetaTags, crawlSummaryResult);
+            // Recursively crawl the link and add as a child
+            CrawlResult childNode = startCrawling(nextUrl, depth + 1, maxDepth, visitedLinksByDepth, urlContentFetched, downloadImages, downloadPath, contentTags, getMetaTags);
+            if (childNode != null) {
+              node.addChild(childNode);
+            }
+          }
         }
       }
-
+      return node;
     } catch (Exception e) {
       LOGGER.error(e.toString());
     }
+    return null;
   }
 
   private Map<String, String> downloadWebsiteImages(Document document, String saveDirectory) throws IOException {
@@ -306,15 +289,18 @@ public class MulechainwebcrawlerOperations {
 
     Map<String, String> linkFileMap = new HashMap<>();
 
-    Map<String, Object> linksMap  = (Map<String, Object>)  crawlingHelper.getPageInsights(document, null, crawlingHelper.PageStatType.IMAGELINKS).get("links");
+    Map<String, Object> linksMap  = (Map<String, Object>)  crawlingHelper.getPageInsights(document, null, crawlingHelper.PageInsightType.IMAGELINKS).get("links");
     if (linksMap != null) {
       imageUrls = (Set<String>) linksMap.get("images");  // Cast to Set<String>
     }
 
-    // Save all images found on the page
-    LOGGER.info("Number of img[src] elements found : " + imageUrls.size());
-    for (String imageUrl : imageUrls) {
-      linkFileMap.put(imageUrl, downloadSingleImage(imageUrl, saveDirectory));
+    if (imageUrls != null) {
+
+      // Save all images found on the page
+      LOGGER.info("Number of img[src] elements found : " + imageUrls.size());
+      for (String imageUrl : imageUrls) {
+        linkFileMap.put(imageUrl, downloadSingleImage(imageUrl, saveDirectory));
+      }
     }
     return linkFileMap;
   }
@@ -398,7 +384,57 @@ public class MulechainwebcrawlerOperations {
       throw e;
     }
 
-    return file.getPath();
+    return (file != null) ? file.getName() : "File is null";
+  }
+
+
+  private SiteMapNode crawlLinks(String url, int depth, int maxDepth, Set<String> visitedLinks) {
+
+    // return if maxDepth reached
+    if (depth > maxDepth || visitedLinks.contains(url)) {
+      return null;
+    }
+
+    // crawl & extract links on current page
+    try {
+      visitedLinks.add(url);
+
+      // Create a new node for this URL
+      SiteMapNode node = new SiteMapNode(url);
+
+      LOGGER.info("Fetching links for : " + url);
+
+      // get page as a html document
+      Document document = crawlingHelper.getDocument(url);
+
+      String title = document.title();
+
+      // If not at max depth, find and crawl the links on the page
+      if (depth <= maxDepth) {
+        // get all links on the current page
+        Set<String> links = new HashSet<>();
+
+        Map<String, Object> linksMap  = (Map<String, Object>)  crawlingHelper.getPageInsights(document, null, crawlingHelper.PageInsightType.INTERNALLINKS).get("links");
+        if (linksMap != null) {
+          links = (Set<String>) linksMap.get("internal");  // Cast to Set<String>
+        }
+
+
+        if (links != null) {
+          for (String nextUrl : links) {
+            // Recursively crawl the link and add as a child
+            SiteMapNode childNode = crawlLinks(nextUrl, depth + 1, maxDepth, visitedLinks);
+            if (childNode != null) {
+              node.addChild(childNode);
+            }
+          }
+        }
+      }
+      return node;
+    } catch (Exception e) {
+      LOGGER.error(e.toString());
+    }
+    return null;
   }
 }
 
