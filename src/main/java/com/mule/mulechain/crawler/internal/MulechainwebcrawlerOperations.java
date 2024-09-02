@@ -26,6 +26,11 @@ import static org.mule.runtime.extension.api.annotation.param.MediaType.ANY;
  */
 public class MulechainwebcrawlerOperations {
 
+  private enum CrawlType {
+    CONTENT,
+    LINK
+  }
+
   private static final Logger LOGGER = LoggerFactory.getLogger(MulechainwebcrawlerOperations.class);
 
   /**
@@ -51,11 +56,11 @@ public class MulechainwebcrawlerOperations {
 
 
     // initialise variables
-    Set<String> urlContentFetched = new HashSet<>();
+    Set<String> visitedLinksGlobal = new HashSet<>();
     Map<Integer, Set<String>> visitedLinksByDepth = new HashMap<>();
     List<String> specificTags = configuration.getTags();
 
-    CrawlResult root = startCrawling(url, 0, maxDepth, visitedLinksByDepth, urlContentFetched, downloadImages, downloadPath, specificTags, getMetaTags);
+    SiteMapNode root = startCrawling(url, 0, maxDepth, visitedLinksByDepth, visitedLinksGlobal, downloadImages, downloadPath, specificTags, getMetaTags, CrawlType.CONTENT);
 
 
     return crawlingHelper.convertToJSON(root);
@@ -74,16 +79,17 @@ public class MulechainwebcrawlerOperations {
   }
 
   @MediaType(value = ANY, strict = false)
-  @Alias("Get-sitemap")
+  @Alias("Generate-sitemap")
   public String getSiteMap (
           @DisplayName("Website URL") @Placement(order = 1) @Example("https://mac-project.ai/docs") String url,
           @DisplayName("Maximum Depth") @Placement(order = 2) @Example("2") int maxDepth) throws IOException {
-    LOGGER.info("Get sitemap");
+    LOGGER.info("Generate sitemap");
 
     // initialise variables
-    Set<String> visitedLinks = new HashSet<>();
+    Set<String> visitedLinksGlobal = new HashSet<>();
+    Map<Integer, Set<String>> visitedLinksByDepth = new HashMap<>();
 
-    SiteMapNode root = crawlLinks(url, 0, maxDepth, visitedLinks);
+    SiteMapNode root = startCrawling(url, 0, maxDepth, visitedLinksByDepth, visitedLinksGlobal, false, null, null, false, CrawlType.LINK);
 
     return crawlingHelper.convertToJSON(root);
   }
@@ -91,7 +97,7 @@ public class MulechainwebcrawlerOperations {
   @MediaType(value = ANY, strict = false)
   @Alias("Download-image")
   public String downloadWebsiteImages (
-                             @DisplayName("Website Or Image URL") @Placement(order = 1) @Example("https://mac-project.ai/docs") String url,
+                             @DisplayName("Page Or Image URL") @Placement(order = 1) @Example("https://mac-project.ai/docs") String url,
                              @DisplayName("Download Location") @Placement(order = 2) @Example("/users/mulesoft/downloads") String downloadPath) throws IOException {
 
     String result = "";
@@ -176,7 +182,7 @@ public class MulechainwebcrawlerOperations {
 
 
   //private String startCrawling(String url, int depth, int maxDepth, Set<String> visitedLinks, boolean downloadImages, String downloadPath, List<String> tags) {
-  private CrawlResult startCrawling(String url, int depth, int maxDepth, Map<Integer, Set<String>> visitedLinksByDepth, Set<String> urlContentFetched, boolean downloadImages, String downloadPath, List<String> contentTags, boolean getMetaTags) {
+  private SiteMapNode startCrawling(String url, int depth, int maxDepth, Map<Integer, Set<String>> visitedLinksByDepth, Set<String> visitedLinksGlobal, boolean downloadImages, String downloadPath, List<String> contentTags, boolean getMetaTags, CrawlType crawlType ) {
 
     // return if maxDepth reached
     if (depth > maxDepth) {
@@ -197,17 +203,17 @@ public class MulechainwebcrawlerOperations {
       // Mark the URL as visited for this depth
       visitedLinksByDepth.get(depth).add(url);
 
-      CrawlResult node = null;
+      SiteMapNode node = null;
 
       // get page as a html document
       Document document = crawlingHelper.getDocument(url);
 
 
-      // check if url contents have been downloaded before
-      if (!urlContentFetched.contains(url)) {
+      // check if url contents have been downloaded before ie applied globally (at all depths). Note, we don't want to do this globally for CrawlType.LINK because we want a link to be unique only at the depth level and not globally (at all depths)
+      if (!visitedLinksGlobal.contains(url) && crawlType == CrawlType.CONTENT) {
 
-        // add url to uniqueLinks to indicate con
-        urlContentFetched.add(url);
+        // add url to urlContentFetched to indicate content has been fetched.
+        visitedLinksGlobal.add(url);
 
         // Create Map to hold all data for the current page - this will be serialized to JSON and saved to file
         Map<String, Object> pageData = new HashMap<>();
@@ -249,9 +255,13 @@ public class MulechainwebcrawlerOperations {
         node = new CrawlResult(url, filename);
 
       }
+      else if (crawlType == CrawlType.LINK) {
+        node = new SiteMapNode(url);
+        LOGGER.info("Found url : " + url);
+      }
       else {
         // content previously downloaded, so setting file name as such
-        node = new CrawlResult(url, "Previously downloaded.");
+        node = new CrawlResult(url, "Duplicate.");
       }
 
 
@@ -269,7 +279,7 @@ public class MulechainwebcrawlerOperations {
           for (String nextUrl : links) {
 
             // Recursively crawl the link and add as a child
-            CrawlResult childNode = startCrawling(nextUrl, depth + 1, maxDepth, visitedLinksByDepth, urlContentFetched, downloadImages, downloadPath, contentTags, getMetaTags);
+            SiteMapNode childNode = startCrawling(nextUrl, depth + 1, maxDepth, visitedLinksByDepth, visitedLinksGlobal, downloadImages, downloadPath, contentTags, getMetaTags, crawlType);
             if (childNode != null) {
               node.addChild(childNode);
             }
@@ -385,56 +395,6 @@ public class MulechainwebcrawlerOperations {
     }
 
     return (file != null) ? file.getName() : "File is null";
-  }
-
-
-  private SiteMapNode crawlLinks(String url, int depth, int maxDepth, Set<String> visitedLinks) {
-
-    // return if maxDepth reached
-    if (depth > maxDepth || visitedLinks.contains(url)) {
-      return null;
-    }
-
-    // crawl & extract links on current page
-    try {
-      visitedLinks.add(url);
-
-      // Create a new node for this URL
-      SiteMapNode node = new SiteMapNode(url);
-
-      LOGGER.info("Fetching links for : " + url);
-
-      // get page as a html document
-      Document document = crawlingHelper.getDocument(url);
-
-      String title = document.title();
-
-      // If not at max depth, find and crawl the links on the page
-      if (depth <= maxDepth) {
-        // get all links on the current page
-        Set<String> links = new HashSet<>();
-
-        Map<String, Object> linksMap  = (Map<String, Object>)  crawlingHelper.getPageInsights(document, null, crawlingHelper.PageInsightType.INTERNALLINKS).get("links");
-        if (linksMap != null) {
-          links = (Set<String>) linksMap.get("internal");  // Cast to Set<String>
-        }
-
-
-        if (links != null) {
-          for (String nextUrl : links) {
-            // Recursively crawl the link and add as a child
-            SiteMapNode childNode = crawlLinks(nextUrl, depth + 1, maxDepth, visitedLinks);
-            if (childNode != null) {
-              node.addChild(childNode);
-            }
-          }
-        }
-      }
-      return node;
-    } catch (Exception e) {
-      LOGGER.error(e.toString());
-    }
-    return null;
   }
 }
 

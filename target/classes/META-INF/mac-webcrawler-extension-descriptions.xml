@@ -102,10 +102,13 @@
                 </parameter>
             </parameters>
         </operation>
-        <operation name="Get-page-meta-tags">
+        <operation name="Generate-sitemap">
             <description><![CDATA[]]></description>
             <parameters>
                 <parameter name="url">
+                    <description><![CDATA[]]></description>
+                </parameter>
+                <parameter name="maxDepth">
                     <description><![CDATA[]]></description>
                 </parameter>
                 <parameter name="outputMimeType">
@@ -119,13 +122,10 @@
                 </parameter>
             </parameters>
         </operation>
-        <operation name="Get-sitemap">
+        <operation name="Get-page-meta-tags">
             <description><![CDATA[]]></description>
             <parameters>
                 <parameter name="url">
-                    <description><![CDATA[]]></description>
-                </parameter>
-                <parameter name="maxDepth">
                     <description><![CDATA[]]></description>
                 </parameter>
                 <parameter name="outputMimeType">
