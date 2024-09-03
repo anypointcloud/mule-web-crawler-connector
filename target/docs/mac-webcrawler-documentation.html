@@ -2190,7 +2190,7 @@ Default configuration
 </div>
 <div class="paragraph">
 <p>
-Example of an operation that uses the configuration and a connection instance to perform some action.
+Crawl a website at a specified depth and fetch contents. Specify tags and classes in the configuration to fetch contents from those elements only.
 </p>
 </div>
 <div class="sect3">
@@ -2328,6 +2328,11 @@ Example of an operation that uses the configuration and a connection instance to
 <div class="paragraph">
 <p><code>&lt;mac-web-crawler:get-page-content&gt;</code></p>
 </div>
+<div class="paragraph">
+<p>
+Get contents of a web page. Content is returned in the resulting payload.
+</p>
+</div>
 <div class="sect3">
 <h4 id="_parameters_3">Parameters</h4>
 <table class="tableblock frame-all grid-all spread">
@@ -2426,6 +2431,11 @@ Example of an operation that uses the configuration and a connection instance to
 <h3 id="Get-page-insights">Get Page Insights</h3>
 <div class="paragraph">
 <p><code>&lt;mac-web-crawler:get-page-insights&gt;</code></p>
+</div>
+<div class="paragraph">
+<p>
+Get insights from a web page including links, word count, number of occurrences of elements. Restrict insights to specific elements in the configuration.
+</p>
 </div>
 <div class="sect3">
 <h4 id="_parameters_4">Parameters</h4>
@@ -2526,6 +2536,11 @@ Example of an operation that uses the configuration and a connection instance to
 <div class="paragraph">
 <p><code>&lt;mac-web-crawler:download-image&gt;</code></p>
 </div>
+<div class="paragraph">
+<p>
+Download all images from a web page, or download a single image at the specified link.
+</p>
+</div>
 <div class="sect3">
 <h4 id="_parameters_5">Parameters</h4>
 <table class="tableblock frame-all grid-all spread">
@@ -2616,6 +2631,11 @@ Example of an operation that uses the configuration and a connection instance to
 <h3 id="Generate-sitemap">Generate Sitemap</h3>
 <div class="paragraph">
 <p><code>&lt;mac-web-crawler:generate-sitemap&gt;</code></p>
+</div>
+<div class="paragraph">
+<p>
+Retrieve internal links as a site map from the specified url and depth.
+</p>
 </div>
 <div class="sect3">
 <h4 id="_parameters_6">Parameters</h4>
@@ -2708,6 +2728,11 @@ Example of an operation that uses the configuration and a connection instance to
 <div class="paragraph">
 <p><code>&lt;mac-web-crawler:get-page-meta-tags&gt;</code></p>
 </div>
+<div class="paragraph">
+<p>
+Fetch the meta tags from a web page.
+</p>
+</div>
 <div class="sect3">
 <h4 id="_parameters_7">Parameters</h4>
 <table class="tableblock frame-all grid-all spread">
@@ -2729,7 +2754,7 @@ Example of an operation that uses the configuration and a connection instance to
 </thead>
 <tbody>
 <tr>
-<td class="tableblock halign-left valign-middle"><p class="tableblock">Website URL</p></td>
+<td class="tableblock halign-left valign-middle"><p class="tableblock">Page URL</p></td>
 <td class="tableblock halign-left valign-middle"><div><div class="paragraph">
 <p>String</p>
 </div></div></td>

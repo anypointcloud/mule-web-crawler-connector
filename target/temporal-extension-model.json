@@ -541,7 +541,7 @@
             }
           ],
           "name": "Crawl-website",
-          "description": "Example of an operation that uses the configuration and a connection instance to perform some action.",
+          "description": "Crawl a website at a specified depth and fetch contents. Specify tags and classes in the configuration to fetch contents from those elements only.",
           "modelProperties": {},
           "kind": "operation"
         },
@@ -728,7 +728,7 @@
             }
           ],
           "name": "Get-page-content",
-          "description": "",
+          "description": "Get contents of a web page. Content is returned in the resulting payload.",
           "modelProperties": {},
           "kind": "operation"
         },
@@ -915,7 +915,7 @@
             }
           ],
           "name": "Get-page-insights",
-          "description": "",
+          "description": "Get insights from a web page including links, word count, number of occurrences of elements. Restrict insights to specific elements in the configuration.",
           "modelProperties": {},
           "kind": "operation"
         }
@@ -1142,7 +1142,7 @@
         }
       ],
       "name": "Download-image",
-      "description": "",
+      "description": "Download all images from a web page, or download a single image at the specified link.",
       "modelProperties": {},
       "kind": "operation"
     },
@@ -1375,7 +1375,7 @@
         }
       ],
       "name": "Generate-sitemap",
-      "description": "",
+      "description": "Retrieve internal links as a site map from the specified url and depth.",
       "modelProperties": {},
       "kind": "operation"
     },
@@ -1438,7 +1438,7 @@
               "allowedStereotypeModels": [],
               "name": "url",
               "displayModel": {
-                "displayName": "Website URL",
+                "displayName": "Page URL",
                 "example": "https://mac-project.ai/docs"
               },
               "description": "",
@@ -1562,7 +1562,7 @@
         }
       ],
       "name": "Get-page-meta-tags",
-      "description": "",
+      "description": "Fetch the meta tags from a web page.",
       "modelProperties": {},
       "kind": "operation"
     }

@@ -34,7 +34,7 @@ public class MulechainwebcrawlerOperations {
   private static final Logger LOGGER = LoggerFactory.getLogger(MulechainwebcrawlerOperations.class);
 
   /**
-   * Example of an operation that uses the configuration and a connection instance to perform some action.
+   * Crawl a website at a specified depth and fetch contents. Specify tags and classes in the configuration to fetch contents from those elements only.
    *
    * @throws IOException
    */
@@ -67,10 +67,13 @@ public class MulechainwebcrawlerOperations {
   }
 
 
+  /**
+  * Fetch the meta tags from a web page.
+  */
   @MediaType(value = ANY, strict = false)
   @Alias("Get-page-meta-tags")
   public String getMetaTags (
-                            @DisplayName("Website URL") @Placement(order = 1) @Example("https://mac-project.ai/docs") String url) throws IOException {
+                            @DisplayName("Page URL") @Placement(order = 1) @Example("https://mac-project.ai/docs") String url) throws IOException {
     LOGGER.info("Get meta tags");
 
     Document document = crawlingHelper.getDocument(url);
@@ -78,6 +81,9 @@ public class MulechainwebcrawlerOperations {
     return crawlingHelper.convertToJSON(crawlingHelper.getPageMetaTags(document));
   }
 
+  /**
+   * Retrieve internal links as a site map from the specified url and depth.
+   */
   @MediaType(value = ANY, strict = false)
   @Alias("Generate-sitemap")
   public String getSiteMap (
@@ -94,6 +100,9 @@ public class MulechainwebcrawlerOperations {
     return crawlingHelper.convertToJSON(root);
   }
 
+  /**
+   * Download all images from a web page, or download a single image at the specified link.
+   */
   @MediaType(value = ANY, strict = false)
   @Alias("Download-image")
   public String downloadWebsiteImages (
@@ -118,6 +127,9 @@ public class MulechainwebcrawlerOperations {
   }
 
 
+  /**
+   * Get insights from a web page including links, word count, number of occurrences of elements. Restrict insights to specific elements in the configuration.
+   */
   @MediaType(value = ANY, strict = false)
   @Alias("Get-page-insights")
   public String getPageInsights(
@@ -131,6 +143,9 @@ public class MulechainwebcrawlerOperations {
   }
 
 
+  /**
+   * Get contents of a web page. Content is returned in the resulting payload.
+   */
   @MediaType(value = ANY, strict = false)
   @Alias("Get-page-content")
   public String getPageContent(

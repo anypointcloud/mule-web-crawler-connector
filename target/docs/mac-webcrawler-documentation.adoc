@@ -47,7 +47,7 @@ Default configuration
 `<mac-web-crawler:crawl-website>`
 
 +++
-Example of an operation that uses the configuration and a connection instance to perform some action.
+Crawl a website at a specified depth and fetch contents. Specify tags and classes in the configuration to fetch contents from those elements only.
 +++
 
 ==== Parameters
@@ -80,6 +80,9 @@ Example of an operation that uses the configuration and a connection instance to
 === Get Page Content
 `<mac-web-crawler:get-page-content>`
 
++++
+Get contents of a web page. Content is returned in the resulting payload.
++++
 
 ==== Parameters
 [cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
@@ -107,6 +110,9 @@ Example of an operation that uses the configuration and a connection instance to
 === Get Page Insights
 `<mac-web-crawler:get-page-insights>`
 
++++
+Get insights from a web page including links, word count, number of occurrences of elements. Restrict insights to specific elements in the configuration.
++++
 
 ==== Parameters
 [cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
@@ -134,6 +140,9 @@ Example of an operation that uses the configuration and a connection instance to
 === Download Image
 `<mac-web-crawler:download-image>`
 
++++
+Download all images from a web page, or download a single image at the specified link.
++++
 
 ==== Parameters
 [cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
@@ -159,6 +168,9 @@ Example of an operation that uses the configuration and a connection instance to
 === Generate Sitemap
 `<mac-web-crawler:generate-sitemap>`
 
++++
+Retrieve internal links as a site map from the specified url and depth.
++++
 
 ==== Parameters
 [cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
@@ -184,12 +196,15 @@ Example of an operation that uses the configuration and a connection instance to
 === Get Page Meta Tags
 `<mac-web-crawler:get-page-meta-tags>`
 
++++
+Fetch the meta tags from a web page.
++++
 
 ==== Parameters
 [cols=".^20%,.^20%,.^35%,.^20%,^.^5%", options="header"]
 |======================
 | Name | Type | Description | Default Value | Required
-| Website URL a| String |  |  | *x*{nbsp}
+| Page URL a| String |  |  | *x*{nbsp}
 | Output Mime Type a| String |  +++The mime type of the payload that this operation outputs.+++ |  | {nbsp}
 | Target Variable a| String |  +++The name of a variable on which the operation's output will be placed+++ |  | {nbsp}
 | Target Value a| String |  +++An expression that will be evaluated against the operation's output and the outcome of that expression will be stored in the target variable+++ |  +++#[payload]+++ | {nbsp}
