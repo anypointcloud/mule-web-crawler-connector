@@ -1,7 +1,11 @@
 package com.mule.mulechain.crawler.internal;
 
 import org.mule.runtime.extension.api.annotation.Operations;
+import org.mule.runtime.extension.api.annotation.param.Optional;
 import org.mule.runtime.extension.api.annotation.param.Parameter;
+import org.mule.runtime.extension.api.annotation.param.display.DisplayName;
+
+import java.util.List;
 
 /**
  * This class represents an extension configuration, values set in this class are commonly used across multiple
@@ -11,9 +15,16 @@ import org.mule.runtime.extension.api.annotation.param.Parameter;
 public class MulechainwebcrawlerConfiguration {
 
   @Parameter
-  private String configId;
+  @Optional
+  @DisplayName("Tag List")
+  private List<String> tags;
 
-  public String getConfigId(){
-    return configId;
+  // Getters and Setters
+  public List<String> getTags() {
+    return this.tags;
+  }
+
+  public void setTags(List<String> tags) {
+    this.tags = tags;
   }
 }
