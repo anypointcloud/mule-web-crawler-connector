@@ -3,7 +3,7 @@
     "id": "java",
     "attributes": {
       "type": "com.mule.mulechain.crawler.internal.MulechainwebcrawlerExtension",
-      "version": "0.0.0-SNAPSHOT"
+      "version": "0.1.0"
     }
   },
   "name": "MAC WebCrawler",
